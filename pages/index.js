@@ -169,13 +169,11 @@ export default function Home({ categories, allProducts, error }) {
                                     <div className="flex flex-col items-center cursor-pointer">
                                         <div className="w-20 h-20 sm:h-24 sm:w-24 border-gray-500 border bg-gray-200 rounded-full overflow-hidden mb-2">
                                             {category.image ? (
-                                                <Image
+                                                <img
                                                     src={category.image}
                                                     alt={category.name}
-                                                    width={96}
-                                                    height={96}
-                                                    objectFit="cover"
-                                                />
+                                                    className="h-full w-full object-cover object-top"
+                                                    />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-gray-500">
                                                     No Image

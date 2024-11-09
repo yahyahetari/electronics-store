@@ -5,9 +5,6 @@ const QuickLinks = [
   { href: "/", label: "الرئيسية" },
   { href: "/shop", label: "المتجر" },
   { href: "/categories", label: "الفئات" },
-  { href: "/category/men", label: "رجال" },
-  { href: "/category/women", label: "نساء" },
-  { href: "/category/kids", label: "أطفال" },
 ];
 
 const CustomerLinks = [
