@@ -25,7 +25,8 @@ const getColorHex = (colorName) => {
     "زيتي": "#808000",
     "نحاسي": "#B87333",
     "عنابي": "#800000",
-    "تركواز": "#40E0D0"
+    "تركواز": "#40E0D0",
+    "ليموني":"#c7d77a"
   };
   return colors[colorName] || colorName;
 };
@@ -131,7 +132,7 @@ export default function ProductBox({ _id, title, images, variants, slug, ratings
                 <img
                   src={images[0]}
                   alt={title}
-                  className="w-[130px] h-[170px] sm:w-[170px] sm:h-[220px] md:w-[180px] md:h-[260px] lg:w-[170px] lg:h-[240px] xl:w-[180px] xl:h-[260px] rounded-md m-1.5 transition-transform duration-300 group-hover:scale-105 bg-white object-cover cursor-pointer"
+                  className="w-[130px] h-full sm:w-[170px] sm:h-full rounded-md m-1.5 transition-transform duration-300 group-hover:scale-105 bg-white object-cover cursor-pointer"
                   onLoad={() => setIsImageLoaded(true)}
                 />
                 <div className="absolute inset-0 rounded-t-md bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-95 transition-opacity duration-300">

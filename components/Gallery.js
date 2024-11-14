@@ -62,7 +62,7 @@ export default function Gallery({ images }) {
             width={500}
             height={400}
             alt="Main product image"
-            className="rounded-lg shadow-2xl object-cover w-full h-[500px]"
+            className="rounded-lg shadow-2xl object-cover w-full h-full"
           />
         )}
         <button

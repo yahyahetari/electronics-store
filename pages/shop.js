@@ -67,10 +67,15 @@ export default function Products({ allProducts, categories }) {
   }, [currentFilters, selectedMainCategory]);
 
   const applyFilters = (products) => {
-    let filtered = products.filter(product => {
-      if (currentFilters.minPrice !== '' && product.price < Number(currentFilters.minPrice)) return false;
-      if (currentFilters.maxPrice !== '' && product.price > Number(currentFilters.maxPrice)) return false;
-
+    if (!products) return;
+    
+    let filtered = [...products].filter(product => {
+      // Get the minimum price from variants
+      const minPrice = Math.min(...product.variants.map(v => v.price));
+      
+      if (currentFilters.minPrice !== '' && minPrice < Number(currentFilters.minPrice)) return false;
+      if (currentFilters.maxPrice !== '' && minPrice > Number(currentFilters.maxPrice)) return false;
+  
       if (selectedMainCategory) {
         const subCategories = categories
           .filter(cat => cat.parent === selectedMainCategory)
@@ -82,7 +87,7 @@ export default function Products({ allProducts, categories }) {
           return product.category === selectedMainCategory || subCategories.includes(product.category);
         }
       }
-
+  
       for (const [key, values] of Object.entries(currentFilters.properties)) {
         if (values.length > 0) {
           if (!product.properties || !product.properties[key] ||
@@ -95,18 +100,27 @@ export default function Products({ allProducts, categories }) {
       }
       return true;
     });
-
+  
     if (currentFilters.sortOrder === 'asc') {
-      filtered.sort((a, b) => a.price - b.price);
+      filtered.sort((a, b) => {
+        const minPriceA = Math.min(...a.variants.map(v => v.price));
+        const minPriceB = Math.min(...b.variants.map(v => v.price));
+        return minPriceA - minPriceB;
+      });
     } else if (currentFilters.sortOrder === 'desc') {
-      filtered.sort((a, b) => b.price - a.price);
+      filtered.sort((a, b) => {
+        const minPriceA = Math.min(...a.variants.map(v => v.price));
+        const minPriceB = Math.min(...b.variants.map(v => v.price));
+        return minPriceB - minPriceA;
+      });
     }
-
+  
     setFilteredProducts(filtered);
     setDisplayedProducts(filtered.slice(0, productsPerPage));
     setHasMore(filtered.length > productsPerPage);
     setPage(1);
   };
+  
 
   const handleFilterChange = (name, value) => {
     setCurrentFilters(prev => {
@@ -159,16 +173,16 @@ export default function Products({ allProducts, categories }) {
   return (
     <div className="min-h-screen bg-gray-100">
       <h1 className="text-3xl text-center bg-slate-300 p-5">جميع المنتجات</h1>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-2 py-4">
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition flex items-center mb-4"
+          className="bg-blue-900 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition flex items-center mb-4 mr-4"
         >
           <FaFilter className="ml-2" />
           {showFilters ? 'إخفاء الفلاتر' : 'عرض الفلاتر'}
         </button>
 
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col md:flex-row gap-2">
           {showFilters && (
             <div className="md:w-1/4">
               <div className="bg-gray-300 p-6 rounded-lg shadow-lg mb-4">

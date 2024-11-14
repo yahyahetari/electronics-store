@@ -30,9 +30,9 @@ const ProductSchema = new Schema({
 // دالة مساعدة لإنشاء الـ slug
 function createSlug(title) {
   return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, '-');
+      .trim()
+      .replace(/\s+/g, '--') // استبدال المسافات بشرطتين
+      .replace(/[^\u0600-\u06FFa-zA-Z0-9]/g, ''); // السماح بالأحرف العربية والإنجليزية والأرقام
 }
 
 // تحديث الـ pre-save hook
