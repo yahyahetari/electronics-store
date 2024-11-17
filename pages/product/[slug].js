@@ -87,6 +87,8 @@ export default function ProductPage({ product, sameSubcategoryProducts, otherSub
     };
 
     const isPropertyAvailable = (name, value) => {
+        if (name === 'اللون') return true;
+        
         return product.variants.some(variant =>
             variant.properties[name]?.includes(value) &&
             Object.entries(selectedProperties)
@@ -95,16 +97,24 @@ export default function ProductPage({ product, sameSubcategoryProducts, otherSub
         );
     };
 
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-screen">
-                <Loader />
-            </div>
-        );
-    }
-
     const toggleProperty = (name, value) => {
-        if (isPropertyAvailable(name, value)) {
+        if (name === 'اللون') {
+            const otherPropertyName = Object.keys(product.variants[0].properties)
+                .find(key => key !== 'اللون');
+
+            const availableOptions = product.variants
+                .filter(variant => variant.properties.اللون.includes(value))
+                .map(variant => variant.properties[otherPropertyName][0]);
+
+            const newProperties = {
+                اللون: value,
+                [otherPropertyName]: availableOptions[0]
+            };
+
+            const matchingVariant = findMatchingVariant(newProperties);
+            setSelectedVariant(matchingVariant);
+            setSelectedProperties(newProperties);
+        } else {
             const newProperties = {
                 ...selectedProperties,
                 [name]: value
@@ -117,6 +127,15 @@ export default function ProductPage({ product, sameSubcategoryProducts, otherSub
             }
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-screen">
+                <Loader />
+            </div>
+        );
+    }
+
 
     const handleAddToCart = () => {
         if (selectedVariant) {

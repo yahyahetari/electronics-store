@@ -69,26 +69,53 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
         }) || null;
     };
 
-    const isValidCombination = (properties) => {
-        return product.variants.some(variant => {
-            return Object.entries(properties).every(([key, value]) => {
-                return variant.properties[key]?.includes(value);
-            });
-        });
-    };
+const isValidCombination = (properties) => {
+    // إذا كان التغيير في اللون، نسمح به دائماً
+    if (Object.keys(properties).length === 1 && 'اللون' in properties) {
+        return true;
+    }
 
-    const toggleProperty = (name, value) => {
+    return product.variants.some(variant => {
+        return Object.entries(properties).every(([key, value]) => {
+            // نتجاهل التحقق من اللون
+            if (key === 'اللون') return true;
+            return variant.properties[key]?.includes(value);
+        });
+    });
+};
+
+
+const toggleProperty = (name, value) => {
+    if (name === 'اللون') {
+        // الحصول على اسم الخاصية الثانية (أياً كانت)
+        const otherPropertyName = Object.keys(product.variants[0].properties)
+            .find(key => key !== 'اللون');
+
+        // الحصول على القيم المتاحة للخاصية الثانية مع اللون المحدد
+        const availableOptions = product.variants
+            .filter(variant => variant.properties.اللون.includes(value))
+            .map(variant => variant.properties[otherPropertyName][0]);
+
+        // تحديد الخصائص الجديدة
+        const newProperties = {
+            اللون: value,
+            [otherPropertyName]: availableOptions[0]
+        };
+
+        const matchingVariant = findMatchingVariant(newProperties);
+        setSelectedProperties(newProperties);
+        setSelectedVariant(matchingVariant);
+    } else {
         const newProperties = {
             ...selectedProperties,
             [name]: value
         };
 
-        if (isValidCombination(newProperties)) {
-            const matchingVariant = findMatchingVariant(newProperties);
-            setSelectedProperties(newProperties);
-            setSelectedVariant(matchingVariant);
-        }
-    };
+        const matchingVariant = findMatchingVariant(newProperties);
+        setSelectedProperties(newProperties);
+        setSelectedVariant(matchingVariant);
+    }
+};
 
     const handlers = useSwipeable({
         onSwipedLeft: () => changeImage(1),
