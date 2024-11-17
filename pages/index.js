@@ -22,7 +22,7 @@ export default function Home({ categories, allProducts, error }) {
     const productsPerPage = 8;
 
     const banners = [
-        "/banner2.jpg",
+        "/banner2.png",
         "/banner3.jpg",
         "/banner4.jpg",
         "/banner5.jpg",
@@ -120,7 +120,7 @@ export default function Home({ categories, allProducts, error }) {
     return (
         <div className="min-h-screen bg-gray-100">
             {/* Banner section */}
-            <div className="relative w-full h-[50vh] md:h-[60vh] lg:h-[70vh] xl:h-screen">
+            <div className="relative w-full h-[40vh] md:h-[60vh] lg:h-[70vh] xl:h-screen">
             <div {...handlers} className="relative w-full h-full">
                     {banners.map((banner, index) => (
                         <Image
