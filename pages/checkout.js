@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Auth from "@/components/Auth";
 import { useRouter } from "next/router";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 export default function Checkout() {
     const { cart } = useContext(CartContext);
@@ -203,8 +204,18 @@ export default function Checkout() {
 
     return (
         <div>
-            <div className="flex flex-col lg:flex-row justify-between lg:-space-x-2 mt-6 px-3 mb-5">
-                {!!cart?.length && (
+            {!cart?.length ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                    <h2 className="text-2xl font-bold">السلة فارغة</h2>
+                    <Link 
+                        href="/shop" 
+                        className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                        الذهاب إلى المتجر
+                    </Link>
+                </div>
+            ) : (
+                <div className="flex flex-col lg:flex-row justify-between lg:-space-x-2 mt-6 px-3 mb-5">
                     <div className="lg:w-2/3 flex flex-col h-fit items-center border-2 border-black p-5 rounded-lg">
                         <h1 className="text-xl font-semibold">معلومات الشحن</h1>
                         <div className="flex flex-col md:flex-row mt-4 gap-4 w-full">
@@ -338,79 +349,76 @@ export default function Checkout() {
                             />
                         </div>
                     </div>
-                )}
-
-                <div className="lg:w-1/3 w-full mb-5 text-center border-2 border-black mt-7 lg:mt-0 flex flex-col gap-8 bg-grey-2 rounded-lg px-4 py-5">
-                    <h2 className="text-xl font-semibold">معلومات الطلب</h2>
-                    {!cart?.length && (
-                        <p className="text-right">السلة فارغة</p>
-                    )}
-                    {products?.length > 0 && (() => {
-                        const allProperties = products.reduce((acc, product) => {
-                            Object.keys(product.properties || {}).forEach(key => {
-                                if (!acc.includes(key)) {
-                                    acc.push(key);
-                                }
-                            });
-                            return acc;
-                        }, []);
-
-                        return (
-                            <table className="w-full">
-                                <thead>
-                                    <tr>
-                                        <th className="border border-gray-200 p-2">المنتج</th>
-                                        <th className="border border-gray-200 p-2">السعر</th>
-                                        {allProperties.map(prop => (
-                                            <th key={prop} className="border border-gray-200 p-2">{prop}</th>
-                                        ))}
-                                        <th className="border border-gray-200 p-2">الكمية</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {products.map(product => {
-                                        const totalPrice = (Number(product.price) * product.quantity).toFixed(2);
-
-                                        return (
-                                            <tr key={product._id} className="border border-gray-200">
-                                                <td className="border border-gray-200 p-2">{product.title}</td>
-                                                <td className="border border-gray-200 p-2">{totalPrice} <span className="text-lg">ر.س</span></td>
-                                                {allProperties.map(prop => (
-                                                    <td key={prop} className="border border-gray-200 p-2">
-                                                        {product.properties?.[prop] || ''}
-                                                    </td>
-                                                ))}
-                                                <td className="border border-gray-200 p-2">{product.quantity}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        );
-                    })()}
-
-                    <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center">
-                            <span className="font-bold">سعر المنتجات</span>
-                            <span className="font-bold">{totalRounded} ريال</span>
+    
+                    <div className="lg:w-1/3 w-full mb-5 text-center border-2 border-black mt-7 lg:mt-0 flex flex-col gap-8 bg-grey-2 rounded-lg px-4 py-5">
+                        <h2 className="text-xl font-semibold">معلومات الطلب</h2>
+                        {products?.length > 0 && (() => {
+                            const allProperties = products.reduce((acc, product) => {
+                                Object.keys(product.properties || {}).forEach(key => {
+                                    if (!acc.includes(key)) {
+                                        acc.push(key);
+                                    }
+                                });
+                                return acc;
+                            }, []);
+    
+                            return (
+                                <table className="w-full">
+                                    <thead>
+                                        <tr>
+                                            <th className="border border-gray-200 p-2">المنتج</th>
+                                            <th className="border border-gray-200 p-2">السعر</th>
+                                            {allProperties.map(prop => (
+                                                <th key={prop} className="border border-gray-200 p-2">{prop}</th>
+                                            ))}
+                                            <th className="border border-gray-200 p-2">الكمية</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {products.map(product => {
+                                            const totalPrice = (Number(product.price) * product.quantity).toFixed(2);
+    
+                                            return (
+                                                <tr key={product._id} className="border border-gray-200">
+                                                    <td className="border border-gray-200 p-2">{product.title}</td>
+                                                    <td className="border border-gray-200 p-2">{totalPrice} <span className="text-lg">ر.س</span></td>
+                                                    {allProperties.map(prop => (
+                                                        <td key={prop} className="border border-gray-200 p-2">
+                                                            {product.properties?.[prop] || ''}
+                                                        </td>
+                                                    ))}
+                                                    <td className="border border-gray-200 p-2">{product.quantity}</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            );
+                        })()}
+    
+                        <div className="flex flex-col gap-2">
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold">سعر المنتجات</span>
+                                <span className="font-bold">{totalRounded} ريال</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold">سعر التوصيل</span>
+                                <span className="font-bold">{SHIPPING_COST} ريال</span>
+                            </div>
+                            <div className="flex justify-between items-center border-t pt-2">
+                                <span className="font-bold">المجموع الكلي</span>
+                                <span className="font-bold text-xl">{(Number(totalRounded) + SHIPPING_COST).toFixed(2)} ريال</span>
+                            </div>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span className="font-bold">سعر التوصيل</span>
-                            <span className="font-bold">{SHIPPING_COST} ريال</span>
-                        </div>
-                        <div className="flex justify-between items-center border-t pt-2">
-                            <span className="font-bold">المجموع الكلي</span>
-                            <span className="font-bold text-xl">{(Number(totalRounded) + SHIPPING_COST).toFixed(2)} ريال</span>
-                        </div>
+                        <button
+                            onClick={goToPayment}
+                            className="bg-black font-medium text-xl text-white rounded-lg mt-3 py-2 px-4"
+                        >
+                            متابعة إلى الدفع
+                        </button>
                     </div>
-                    <button
-                        onClick={goToPayment}
-                        className="bg-black font-medium text-xl text-white rounded-lg mt-3 py-2 px-4"
-                    >
-                        متابعة إلى الدفع
-                    </button>
                 </div>
-            </div>
+            )}
         </div>
     );
-}
+}    

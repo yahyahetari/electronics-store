@@ -104,7 +104,7 @@ const SuccessfulPayment = () => {
 
             {showContent && (
                 <>
-                    <h1 className='font-semibold text-xl text-green-1 bg-green-600 p-3 rounded-lg'>
+                    <h1 className='font-semibold text-xl text-green-1 bg-green-600 p-3 mt-9 rounded-lg'>
                         دفع ناجح
                     </h1>
                     <p className='font-extrabold text-5xl text-black'>فلسطين حرة</p>
@@ -118,6 +118,12 @@ const SuccessfulPayment = () => {
                         className="p-4 border bg-black text-white text-xl hover:bg-white hover:text-black rounded-lg"
                     >
                         العودة الى الصفحة الرئيسية
+                    </button>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="p-4 border bg-emerald-600 text-white text-xl hover:bg-white hover:text-black rounded-lg"
+                    >
+                        الذهاب الى صفحة الطلبات
                     </button>
                 </>
             )}
