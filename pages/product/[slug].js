@@ -333,7 +333,7 @@ export default function ProductPage({ product, sameSubcategoryProducts, otherSub
             </ul>
         </div>
 
-        <div className="-mt-8">
+        <div className="-mt-6">
             {activeTab === 'description' && (
                 <div className="animate-fade-in">
                     <p className="text-base sm:text-lg">{product.description}</p>
