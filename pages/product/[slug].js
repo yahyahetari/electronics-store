@@ -305,11 +305,11 @@ export default function ProductPage({ product, sameSubcategoryProducts, otherSub
             </div>
 
             <div className="border-b border-gray-200">
-            <ul className="flex gap-8">
+            <ul className="flex gap-8 ">
                 <li>
                     <button
                         onClick={() => setActiveTab('description')}
-                        className={`py-4 px-6 font-semibold relative ${
+                        className={`py-4 px-6 font-semibold relative  ${
                             activeTab === 'description' 
                             ? 'text-black after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-black' 
                             : 'text-gray-500 hover:text-black'
@@ -333,7 +333,7 @@ export default function ProductPage({ product, sameSubcategoryProducts, otherSub
             </ul>
         </div>
 
-        <div className="mt-6">
+        <div className="-mt-8">
             {activeTab === 'description' && (
                 <div className="animate-fade-in">
                     <p className="text-base sm:text-lg">{product.description}</p>

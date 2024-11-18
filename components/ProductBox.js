@@ -26,7 +26,7 @@ const getColorHex = (colorName) => {
     "نحاسي": "#B87333",
     "عنابي": "#800000",
     "تركواز": "#40E0D0",
-    "ليموني":"#c7d77a"
+    "ليموني": "#c7d77a"
   };
   return colors[colorName] || colorName;
 };
@@ -46,7 +46,7 @@ export default function ProductBox({ _id, title, images, variants, slug, ratings
   const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   // استخراج جميع الألوان الفريدة من جميع المتغيرات
-  const allColors = [...new Set(variants.flatMap(variant => 
+  const allColors = [...new Set(variants.flatMap(variant =>
     variant.properties?.اللون || []
   ))];
 
@@ -147,7 +147,7 @@ export default function ProductBox({ _id, title, images, variants, slug, ratings
               </p>
 
               <div className="text-sm flex flex-wrap gap-0.5 mt-2">
-                {allColors.map((color, index) => (
+                {allColors.slice(0, 5).map((color, index) => (
                   <span
                     key={index}
                     className="w-4 h-4 rounded-full inline-block border border-black"
@@ -158,6 +158,11 @@ export default function ProductBox({ _id, title, images, variants, slug, ratings
                     title={color}
                   />
                 ))}
+                {allColors.length > 5 && (
+                  <span className="text-xs font-bold flex items-center">
+                    +{allColors.length - 5}
+                  </span>
+                )}
               </div>
             </div>
 
