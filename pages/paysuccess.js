@@ -120,7 +120,7 @@ const SuccessfulPayment = () => {
                         العودة الى الصفحة الرئيسية
                     </button>
                     <button
-                        onClick={() => router.push('/')}
+                        onClick={() => router.push('/orders')}
                         className="p-4 border bg-emerald-600 text-white text-xl hover:bg-white hover:text-black rounded-lg"
                     >
                         الذهاب الى صفحة الطلبات
