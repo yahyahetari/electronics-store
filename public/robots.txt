@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Sitemap: https://hetari-e-store.vercel.app/sitemap.xml
+
+# Optimize crawling
+Crawl-delay: 10
+
+# Block unnecessary files and directories
+Disallow: /admin/
+Disallow: /api/
+Disallow: /cart/
+
+# Allow CSS and JS files for better indexing
+Allow: /*.css$
+Allow: /*.js$
