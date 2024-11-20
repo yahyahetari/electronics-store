@@ -1,8 +1,13 @@
 module.exports = {
     siteUrl: 'https://hetari-e-store.vercel.app',
     generateRobotsTxt: true,
-    sitemapSize: 7000,
+    priority: 1.0,
     changefreq: 'daily',
-    priority: 0.7
+    exclude: ['/api/*'],
+    robotsTxtOptions: {
+      additionalSitemaps: [
+        'https://hetari-e-store.vercel.app/sitemap.xml',
+      ],
+    },
   }
   

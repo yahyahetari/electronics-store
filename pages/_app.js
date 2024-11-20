@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { SessionProvider } from 'next-auth/react';
 import Footer from '@/components/Footer';
 import { DefaultSeo } from 'next-seo';
+import SEO from '../next-seo.config';
 import Head from 'next/head';
 
 export default function App({ 
@@ -15,26 +16,10 @@ export default function App({
       <CartContextProvider>
         <Head>
           <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link rel="icon" href="/favicon.ico" />
         </Head>
 
-        <DefaultSeo
-          title="هتاري - متجر الهواتف المحمولة | Hetari E-Store"
-          description="هتاري - متجرك الأول للهواتف المحمولة وإكسسوارات التقنية. تسوق الآن بأفضل الأسعار مع خدمة توصيل سريعة"
-          canonical="https://hetari-e-store.vercel.app"
-          openGraph={{
-            type: 'website',
-            locale: 'ar_SA',
-            url: 'https://hetari-e-store.vercel.app',
-            siteName: 'هتاري - Hetari',
-          }}
-          additionalMetaTags={[
-            {
-              name: 'keywords',
-              content: 'هتاري, متجر هتاري, hetari, هواتف محمولة, اكسسوارات جوالات, جوالات, متجر الكتروني'
-            },
-          ]}
-        />
+        <DefaultSeo {...SEO} />
 
         <script
           type="application/ld+json"
@@ -44,7 +29,17 @@ export default function App({
               "@type": "Store",
               "name": "هتاري - Hetari",
               "url": "https://hetari-e-store.vercel.app",
-              "description": "متجر هتاري للهواتف المحمولة والإكسسوارات"
+              "logo": "https://hetari-e-store.vercel.app/logo.png",
+              "description": "متجر هتاري للهواتف المحمولة والإكسسوارات - وجهتك الأولى للحصول على أحدث التقنيات",
+              "address": {
+                "@type": "PostalAddress",
+                "addressCountry": "SA"
+              },
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://hetari-e-store.vercel.app/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
             })
           }}
         />

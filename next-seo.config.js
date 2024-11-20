@@ -15,8 +15,7 @@ export default {
       },
       {
         name: 'theme-color',
-        content: '#000', // يمكنك تحديد لون يناسب العلامة التجارية
+        content: '#000',
       },
     ],
-  };
-  
+};
