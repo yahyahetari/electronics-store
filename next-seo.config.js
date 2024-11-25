@@ -7,6 +7,7 @@ export default {
       type: 'website',
       locale: 'ar_SA',
       site_name: 'هتاري',
+      title: 'هتاري - متجر الهواتف المحمولة',
       url: 'https://hetari-e-store.vercel.app/',
     },
     additionalMetaTags: [
