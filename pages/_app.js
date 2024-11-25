@@ -8,14 +8,18 @@ import { DefaultSeo } from 'next-seo';
 import SEO from '../next-seo.config';
 import Head from 'next/head';
 
-export default function App({ 
-  Component, pageProps : {session, ...pageProps } 
+export default function App({
+  Component, pageProps: { session, ...pageProps }
 }) {
   return (
     <SessionProvider session={session}>
       <CartContextProvider>
         <Head>
           <meta charSet="utf-8" />
+          <title>هتاري</title>
+          <meta name="application-name" content="هتاري" />
+          <meta property="og:site_name" content="هتاري" />
+          <meta property="og:title" content="هتاري - متجر الهواتف المحمولة" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
@@ -47,7 +51,7 @@ export default function App({
 
         <div className="flex flex-col min-h-screen">
           <Header />
-          <main className="flex-grow pt-20"> 
+          <main className="flex-grow pt-20">
             <Toaster position="top-center" reverseOrder={false} />
             <Component {...pageProps} />
           </main>
