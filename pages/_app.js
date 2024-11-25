@@ -26,8 +26,9 @@ export default function App({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Store",
-              "name": "هتاري - Hetari",
+              "@type": "Organization",
+              "name": "هتاري",
+              "alternateName": "متجر هتاري",
               "url": "https://hetari-e-store.vercel.app",
               "logo": "https://hetari-e-store.vercel.app/logo.png",
               "description": "متجر هتاري للهواتف المحمولة والإكسسوارات - وجهتك الأولى للحصول على أحدث التقنيات",
