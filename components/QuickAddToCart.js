@@ -57,7 +57,7 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
 
         const timer = setTimeout(() => {
             setIsLoading(false);
-        }, 2000);
+        }, 1000);
         return () => clearTimeout(timer);
     }, [product]);
 
@@ -69,53 +69,47 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
         }) || null;
     };
 
-const isValidCombination = (properties) => {
-    // إذا كان التغيير في اللون، نسمح به دائماً
-    if (Object.keys(properties).length === 1 && 'اللون' in properties) {
-        return true;
-    }
+    const isValidCombination = (properties) => {
+        if (Object.keys(properties).length === 1 && 'اللون' in properties) {
+            return true;
+        }
 
-    return product.variants.some(variant => {
-        return Object.entries(properties).every(([key, value]) => {
-            // نتجاهل التحقق من اللون
-            if (key === 'اللون') return true;
-            return variant.properties[key]?.includes(value);
+        return product.variants.some(variant => {
+            return Object.entries(properties).every(([key, value]) => {
+                if (key === 'اللون') return true;
+                return variant.properties[key]?.includes(value);
+            });
         });
-    });
-};
+    };
 
+    const toggleProperty = (name, value) => {
+        if (name === 'اللون') {
+            const otherPropertyName = Object.keys(product.variants[0].properties)
+                .find(key => key !== 'اللون');
 
-const toggleProperty = (name, value) => {
-    if (name === 'اللون') {
-        // الحصول على اسم الخاصية الثانية (أياً كانت)
-        const otherPropertyName = Object.keys(product.variants[0].properties)
-            .find(key => key !== 'اللون');
+            const availableOptions = product.variants
+                .filter(variant => variant.properties.اللون.includes(value))
+                .map(variant => variant.properties[otherPropertyName][0]);
 
-        // الحصول على القيم المتاحة للخاصية الثانية مع اللون المحدد
-        const availableOptions = product.variants
-            .filter(variant => variant.properties.اللون.includes(value))
-            .map(variant => variant.properties[otherPropertyName][0]);
+            const newProperties = {
+                اللون: value,
+                [otherPropertyName]: availableOptions[0]
+            };
 
-        // تحديد الخصائص الجديدة
-        const newProperties = {
-            اللون: value,
-            [otherPropertyName]: availableOptions[0]
-        };
+            const matchingVariant = findMatchingVariant(newProperties);
+            setSelectedProperties(newProperties);
+            setSelectedVariant(matchingVariant);
+        } else {
+            const newProperties = {
+                ...selectedProperties,
+                [name]: value
+            };
 
-        const matchingVariant = findMatchingVariant(newProperties);
-        setSelectedProperties(newProperties);
-        setSelectedVariant(matchingVariant);
-    } else {
-        const newProperties = {
-            ...selectedProperties,
-            [name]: value
-        };
-
-        const matchingVariant = findMatchingVariant(newProperties);
-        setSelectedProperties(newProperties);
-        setSelectedVariant(matchingVariant);
-    }
-};
+            const matchingVariant = findMatchingVariant(newProperties);
+            setSelectedProperties(newProperties);
+            setSelectedVariant(matchingVariant);
+        }
+    };
 
     const handlers = useSwipeable({
         onSwipedLeft: () => changeImage(1),
@@ -128,13 +122,6 @@ const toggleProperty = (name, value) => {
         const currentIndex = product.images.indexOf(mainImage);
         const newIndex = (currentIndex + direction + product.images.length) % product.images.length;
         setMainImage(product.images[newIndex]);
-    };
-
-    const currentIndex = product.images.indexOf(mainImage) + 1;
-
-    const shimmerEffect = {
-        hidden: { x: '-100%' },
-        visible: { x: '100%' },
     };
 
     const increaseQuantity = () => {
@@ -156,25 +143,24 @@ const toggleProperty = (name, value) => {
                 quantity,
                 price: selectedVariant.price
             });
-            onClose();
+           
         }
     };
 
+    const currentIndex = product.images.indexOf(mainImage) + 1;
     const averageRating = ratings && ratings.length > 0
         ? ratings.reduce((sum, item) => sum + item.rating, 0) / ratings.length
         : 0;
-
     const showRating = averageRating >= 3.5;
 
-    const RatingStars = ({ rating, size = 'w-4 h-4' }) => {
+    const RatingStars = ({ rating }) => {
         if (!showRating) return null;
-
         return (
             <div className="flex items-center justify-center mb-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                     <Star
                         key={star}
-                        className={`${size} ${star <= Math.round(rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-4 h-4 ${star <= Math.round(rating) ? 'text-yellow-400' : 'text-gray-300'}`}
                         fill={star <= Math.round(rating) ? 'currentColor' : 'none'}
                     />
                 ))}
@@ -187,85 +173,87 @@ const toggleProperty = (name, value) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
             onClick={onClose}
         >
             <motion.div
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 50, opacity: 0 }}
-                className="bg-white p-2 mt-10 mb-10 rounded-lg max-w-xl w-3/5 sm:w-2/3 relative"
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                className="bg-white p-4 rounded-t-3xl w-full sm:max-w-xl sm:rounded-lg sm:mt-10 sm:mb-10 sm:mx-auto relative"
                 onClick={e => e.stopPropagation()}
             >
-                <button onClick={onClose} className="absolute -top-3 -right-3 rounded-full bg-black text-gray-200 hover:text-red-600">
+                <button
+                    onClick={onClose}
+                    className="absolute -top-3 -right-3 rounded-full bg-black text-gray-200 hover:text-red-600 hidden sm:block"
+                >
                     <X />
                 </button>
 
+                {/* شريط السحب للموبايل فقط */}
+                <div className="w-16 h-1 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden" />
+
                 <div className="flex flex-col sm:flex-row">
                     <div className="w-full sm:w-1/2">
-                        <div {...handlers} className="relative w-full justify-center block">
-                            {isLoading ? (
-                                <div className="w-full h-[280px] sm:h-[300px] bg-gray-300 rounded-lg relative overflow-hidden">
-                                    <motion.div
-                                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent"
-                                        initial="hidden"
-                                        animate="visible"
-                                        variants={shimmerEffect}
-                                        transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                                        style={{ width: '50%', opacity: 0.2 }}
-                                    />
-                                </div>
-                            ) : (
+                        {/* Main image section for larger screens */}
+                        <div className="hidden sm:block">
+                            <div {...handlers} className="relative w-full justify-center">
                                 <Image
                                     src={mainImage}
                                     width={500}
                                     height={400}
                                     alt="Main product image"
-                                    className="rounded-lg shadow-xl object-cover w-64 sm:w-full sm:h-80 mx-auto"
+                                    className="rounded-lg shadow-xl object-cover w-64 h-full"
                                 />
-                            )}
+                                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 px-3 py-1 rounded-3xl text-sm">
+                                    {currentIndex} / {product.images.length}
+                                </div>
+                            </div>
 
-                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 pr-2 pl-2 rounded-3xl">
-                                {product.images.length} / {currentIndex}
+                            {/* Thumbnails for larger screens */}
+                            <div className="flex gap-2 overflow-x-auto py-2 scrollbar-none">
+                                {product.images.map((image, index) => (
+                                    <div
+                                        key={index}
+                                        className="relative w-16 h-16 flex-shrink-0"
+                                        onClick={() => setMainImage(image)}
+                                    >
+                                        <Image
+                                            src={image}
+                                            width={64}
+                                            height={64}
+                                            alt={`Thumbnail ${index}`}
+                                            className={`w-16 h-16 rounded-lg object-cover ${mainImage === image ? 'border-2 border-black' : ''
+                                                }`}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="hidden sm:flex gap-2 overflow-auto mt-2">
+                        {/* All images side by side for mobile screens */}
+                        <div className="flex sm:hidden gap-2 overflow-x-auto py-2">
                             {product.images.map((image, index) => (
-                                <div key={index} className="relative w-20 h-20">
-                                    {isLoading ? (
-                                        <div className="w-20 h-20 bg-gray-300 rounded-lg relative overflow-hidden">
-                                            <motion.div
-                                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent"
-                                                initial="hidden"
-                                                animate="visible"
-                                                variants={shimmerEffect}
-                                                transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                                                style={{ width: '50%', opacity: 0.2 }}
-                                            />
-                                        </div>
-                                    ) : (
-                                        <Image
-                                            src={image}
-                                            width={100}
-                                            height={100}
-                                            alt={`Thumbnail ${index}`}
-                                            className={`w-20 h-20 rounded-lg object-cover cursor-pointer ${mainImage === image ? 'border-2 border-black' : ''}`}
-                                            onClick={() => setMainImage(image)}
-                                        />
-                                    )}
+                                <div key={index} className="relative flex-shrink-0">
+                                    <Image
+                                        src={image}
+                                        width={200}
+                                        height={200}
+                                        alt={`Product image ${index + 1}`}
+                                        className="rounded-lg shadow-xl object-cover w-28 h-full"
+                                    />
                                 </div>
                             ))}
                         </div>
                     </div>
 
+
                     <div className="w-full sm:w-1/2 mt-4 sm:mt-0 sm:pr-4">
                         <h2 className="text-xl text-center font-bold">{product.title}</h2>
                         <RatingStars rating={averageRating} />
-                        <p className="text-lg text-center font-semibold">
-                            {selectedVariant ? `${selectedVariant.price} ر.س` : 'اختر المواصفات'}
+                        <p className={`text-lg text-center font-semibold ${!selectedVariant ? 'text-red-600' : ''}`}>
+                            {selectedVariant ? `${selectedVariant.price} ر.س` : 'اختر مواصفات متاحة'}
                         </p>
-
                         {product.variants[0]?.properties &&
                             Object.entries(product.variants[0].properties).map(([name, values]) => (
                                 <div key={name} className="mb-4">
@@ -322,7 +310,7 @@ const toggleProperty = (name, value) => {
                                 className={`font-medium text-xl text-white rounded-lg py-2 w-3/4 flex items-center justify-center ${!selectedVariant || selectedVariant.stock < 1 ? 'bg-gray-400 cursor-not-allowed' : 'bg-black'}`}
                             >
                                 <span className="hidden sm:inline">
-                                    {!selectedVariant ? 'اختر المواصفات' : selectedVariant.stock < 1 ? 'نفذت الكمية' : 'إضافة إلى السلة'}
+                                    {!selectedVariant ? 'اختر مواصفات متاحة' : selectedVariant.stock < 1 ? 'نفذت الكمية' : 'إضافة إلى السلة'}
                                 </span>
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
