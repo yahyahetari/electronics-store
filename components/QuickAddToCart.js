@@ -199,7 +199,7 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
                 <div
                     {...closeModalHandlers}
                     onClick={onClose}
-                    className="w-16 h-1 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden cursor-grab active:cursor-grabbing"
+                    className="w-28 h-2 bg-gray-300 rounded-full mx-auto mb-2 sm:hidden cursor-grab active:cursor-grabbing"
                 />
                 <div className="flex flex-col sm:flex-row">
                     <div className="w-full sm:w-1/2">
