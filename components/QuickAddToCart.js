@@ -143,7 +143,7 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
                 quantity,
                 price: selectedVariant.price
             });
-           
+
         }
     };
 
@@ -168,6 +168,12 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
         );
     };
 
+    const closeModalHandlers = useSwipeable({
+        onSwipedDown: () => onClose(),
+        delta: 10,
+        preventDefaultTouchmoveEvent: true,
+    });
+
     return (
         <motion.div
             initial={{ opacity: 0 }}
@@ -190,9 +196,11 @@ const QuickAddToCart = ({ product, onClose, ratings }) => {
                     <X />
                 </button>
 
-                {/* شريط السحب للموبايل فقط */}
-                <div className="w-16 h-1 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden" />
-
+                <div
+                    {...closeModalHandlers}
+                    className="w-16 h-1 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden cursor-grab active:cursor-grabbing"
+                />
+                
                 <div className="flex flex-col sm:flex-row">
                     <div className="w-full sm:w-1/2">
                         {/* Main image section for larger screens */}
