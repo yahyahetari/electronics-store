@@ -17,9 +17,12 @@ export default function App({
         <Head>
           <meta charSet="utf-8" />
           <title>هتاري</title>
+          <meta name="title" content="هتاري" />
+          <meta name="og:title" content="هتاري" />
           <meta name="application-name" content="هتاري" />
           <meta property="og:site_name" content="هتاري" />
-          <meta property="og:title" content="هتاري - متجر الهواتف المحمولة" />
+          <meta property="og:title" content="هتاري" />
+          <link rel="canonical" href="https://hetari-e-store.vercel.app" />
           <link rel="icon" href="/favicon.ico" />
         </Head>
 
@@ -35,7 +38,7 @@ export default function App({
               "alternateName": "متجر هتاري",
               "url": "https://hetari-e-store.vercel.app",
               "logo": "https://hetari-e-store.vercel.app/logo.png",
-              "description": "متجر هتاري للهواتف المحمولة والإكسسوارات - وجهتك الأولى للحصول على أحدث التقنيات",
+              "description": "متجر هتاري للهواتف المحمولة والإكسسوارات",
               "address": {
                 "@type": "PostalAddress",
                 "addressCountry": "SA"
