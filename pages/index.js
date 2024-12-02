@@ -120,7 +120,7 @@ export default function Home({ categories, allProducts, error }) {
     return (
         <div className="min-h-screen bg-gray-100">
             {/* Banner section */}
-            <div className="relative w-full h-[40vh] md:h-[60vh] lg:h-[70vh] xl:h-screen">
+            <div className="relative w-full h-[60vh] md:h-[70vh] lg:h-[85vh] ">
                 <div {...handlers} className="relative w-full h-full">
                     {banners.map((banner, index) => (
                         <Image
@@ -161,7 +161,7 @@ export default function Home({ categories, allProducts, error }) {
             {/* Categories Section */}
             {categories && categories.length > 0 && (
                 <div className="bg-white">
-                    <h2 className="text-xl sm:text-3xl font-bold text-gray-800 bg-gray-100 p-6 mb-6 uppercase text-center">الفئات</h2>
+                    <h2 className="text-xl sm:text-3xl font-bold text-gray-800 bg-gray-100 p-6 uppercase text-center">الفئات</h2>
                     <div className="container mx-auto px-4">
                         <div className="grid grid-cols-3 gap-4">
                             {categories.map((category) => (
