@@ -132,7 +132,7 @@ export default function ProductBox({ _id, title, images, variants, slug, ratings
                 <img
                   src={images[0]}
                   alt={title}
-                  className="w-[140px] h-full sm:w-[180px] sm:h-full rounded-md m-1.5 transition-transform duration-300 group-hover:scale-105 bg-white object-cover cursor-pointer"
+                  className="w-[160px] h-full sm:w-[180px] sm:h-full rounded-md m-1.5 transition-transform duration-300 group-hover:scale-105 bg-white object-cover cursor-pointer"
                   onLoad={() => setIsImageLoaded(true)}
                 />
                 <div className="absolute inset-0 rounded-t-md bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-95 transition-opacity duration-300">
