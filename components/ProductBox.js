@@ -68,7 +68,7 @@ export default function ProductBox({ _id, title, images, variants, slug, ratings
           <div className="relative overflow-hidden">
             <div className="flex flex-col gap-1">
               <div className="relative overflow-hidden group">
-                <div className="w-[160px] h-[170px] sm:w-[170px] sm:h-[220px] md:w-[180px] md:h-[260px] lg:w-[170px] lg:h-[240px] xl:w-[180px] xl:h-[260px] rounded-md m-1.5 bg-gray-400">
+                <div className="w-[160px] h-[190px] sm:w-[170px] sm:h-[220px] md:w-[180px] md:h-[260px] lg:w-[170px] lg:h-[240px] xl:w-[180px] xl:h-[260px] rounded-md m-1.5 bg-gray-400">
                   <motion.div
                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent"
                     initial="hidden"
