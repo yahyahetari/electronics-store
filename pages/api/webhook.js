@@ -28,16 +28,27 @@ export default async function handler(req, res) {
 
         if (paid) {
             try {
-                // Inside the webhook handler
-                const cartItems = JSON.parse(metadata.cartItems);
-                const orderItems = cartItems.map(item => ({
-                    productId: item.id,
-                    title: item.title,
-                    quantity: item.quantity,
-                    price: item.price,
-                    properties: item.properties,
-                    image: item.image
-                }));
+                // Reconstruct order data from metadata
+                const orderIds = metadata.orderIds.split(',');
+                const quantities = metadata.quantities.split(',').map(Number);
+                const prices = metadata.prices.split(',').map(Number);
+                const [firstName, lastName] = metadata.customerName.split(' ');
+                const [email, phone] = metadata.contactInfo.split('|');
+                const [address, city, country, postalCode] = metadata.shippingAddress.split('|');
+
+                // Fetch products to get full details
+                const products = await Product.find({ _id: { $in: orderIds } });
+
+                const orderItems = orderIds.map((id, index) => {
+                    const product = products.find(p => p._id.toString() === id);
+                    return {
+                        productId: id,
+                        title: product.title,
+                        quantity: quantities[index],
+                        price: prices[index],
+                        image: product.images[0]
+                    };
+                });
 
                 const totalAmount = orderItems.reduce((sum, item) =>
                     sum + (item.price * item.quantity), 0) + SHIPPING_COST / 100;
@@ -45,39 +56,32 @@ export default async function handler(req, res) {
                 const orderDoc = await Order.create({
                     items: orderItems,
                     totalAmount,
-                    firstName: metadata.firstName,
-                    lastName: metadata.lastName,
-                    email: metadata.email,
-                    phone: metadata.phone,
-                    address: metadata.address,
-                    address2: metadata.address2,
-                    state: metadata.state,
-                    city: metadata.city,
-                    country: metadata.country,
-                    postalCode: metadata.postalCode,
-                    notes: metadata.notes,
+                    firstName,
+                    lastName,
+                    email,
+                    phone,
+                    address,
+                    city,
+                    country,
+                    postalCode,
+                    notes: metadata.additionalInfo,
                     shippingCost: SHIPPING_COST / 100,
                     paid: true,
                     paymentId: session.payment_intent
                 });
 
-
                 // Update product stock
-                for (const item of cartItems) {
-                    const product = await Product.findById(item.id);
+                for (let i = 0; i < orderIds.length; i++) {
+                    const product = products.find(p => p._id.toString() === orderIds[i]);
                     if (product) {
-                        const variantIndex = product.variants.findIndex(v =>
-                            Object.entries(item.properties).every(([key, value]) =>
-                                v.properties[key]?.[0] === value
-                            )
-                        );
-
-                        if (variantIndex !== -1) {
-                            product.variants[variantIndex].stock -= item.quantity;
-                            await product.save();
+                        // Update main stock if no variants
+                        if (!product.variants || product.variants.length === 0) {
+                            product.stock -= quantities[i];
                         }
+                        await product.save();
                     }
                 }
+
             } catch (err) {
                 console.error('Order processing error:', err);
                 return res.status(500).json({ message: 'Error processing order' });

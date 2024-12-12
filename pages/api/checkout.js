@@ -53,6 +53,7 @@ export default async function handler(req, res) {
             }
         });
 
+        // تقسيم البيانات إلى أجزاء صغيرة
         const session = await stripe.checkout.sessions.create({
             line_items,
             mode: 'payment',
@@ -60,18 +61,13 @@ export default async function handler(req, res) {
             success_url: `${process.env.NEXT_PUBLIC_STORE_URL}/paysuccess`,
             cancel_url: `${process.env.NEXT_PUBLIC_STORE_URL}/cart`,
             metadata: {
-                cartItems: JSON.stringify(cartItemsArray),
-                firstName,
-                lastName,
-                email,
-                phone,
-                address,
-                address2,
-                state,
-                city,
-                country,
-                postalCode,
-                notes
+                orderIds: cartItemsArray.map(item => item.id).join(','),
+                quantities: cartItemsArray.map(item => item.quantity).join(','),
+                prices: cartItemsArray.map(item => item.price).join(','),
+                customerName: `${firstName} ${lastName}`,
+                contactInfo: `${email}|${phone}`,
+                shippingAddress: `${address}|${city}|${country}|${postalCode}`,
+                additionalInfo: notes || ''
             },
         });
 
