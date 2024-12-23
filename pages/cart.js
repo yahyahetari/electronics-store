@@ -240,7 +240,7 @@ export default function Cart() {
                                                 end={product.price * product.quantity}
                                                 decimals={2}
                                                 duration={1}
-                                            /> ر.س
+                                            /> درهم
                                         </p>
                                     </div>
                                 </div>
@@ -280,7 +280,7 @@ export default function Cart() {
                             decimals={2}
                             duration={1}
                             onEnd={() => setPrevTotals(prev => ({ ...prev, total: totalRounded }))}
-                        /> ر.س
+                        /> درهم
                     </span>
                 </div>
                 <button

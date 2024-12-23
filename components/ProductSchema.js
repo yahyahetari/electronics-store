@@ -14,7 +14,7 @@ export default function ProductSchema({ product }) {
     "sku": product.sku || product._id, // استخدام SKU أو معرف المنتج
     "offers": {
       "@type": "Offer",
-      "priceCurrency": "SAR", // العملة: الريال السعودي
+      "priceCurrency": "AED", // العملة: الريال السعودي
       "price": product.price,
       "availability": "https://schema.org/InStock",
       "url": `${process.env.NEXT_PUBLIC_SITE_URL}/product/${product.slug}` // رابط المنتج
