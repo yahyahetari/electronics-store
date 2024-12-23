@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 export async function getServerSideProps({ params, query: urlQuery }) {
   await connectToDB();
   const { query } = params;
-
   const searchRegex = new RegExp(query, 'i');
 
   let filter = { 
@@ -20,11 +19,11 @@ export async function getServerSideProps({ params, query: urlQuery }) {
       { tags: searchRegex },
     ]
   };
-  
+
   if (urlQuery.minPrice || urlQuery.maxPrice) {
-    filter.price = {};
-    if (urlQuery.minPrice) filter.price.$gte = Number(urlQuery.minPrice);
-    if (urlQuery.maxPrice) filter.price.$lte = Number(urlQuery.maxPrice);
+    filter['variants.price'] = {};
+    if (urlQuery.minPrice) filter['variants.price'].$gte = Number(urlQuery.minPrice);
+    if (urlQuery.maxPrice) filter['variants.price'].$lte = Number(urlQuery.maxPrice);
   }
 
   if (urlQuery.category) {
@@ -33,15 +32,13 @@ export async function getServerSideProps({ params, query: urlQuery }) {
 
   const propertyFilters = Object.keys(urlQuery).filter(key => key.startsWith('property_'));
   if (propertyFilters.length > 0) {
-    filter.properties = {};
     propertyFilters.forEach(key => {
       const propertyName = key.replace('property_', '');
-      filter.properties[propertyName] = urlQuery[key];
+      filter[`variants.properties.${propertyName}`] = urlQuery[key];
     });
   }
 
-  const searchedProducts = await Product.find(filter, null, { sort: { '_id': -1 } });
-
+  const searchedProducts = await Product.find(filter);
   const searchedCategories = await Category.find({ 
     $or: [
       { name: searchRegex },
@@ -58,54 +55,40 @@ export async function getServerSideProps({ params, query: urlQuery }) {
   const uniqueProducts = Array.from(new Set(allProducts.map(p => p._id.toString())))
     .map(_id => allProducts.find(p => p._id.toString() === _id));
 
-  const allCategories = await Category.find({});
+  // Get unique category IDs from search results
+  const productCategoryIds = new Set(uniqueProducts.map(product => product.category.toString()));
 
-  function normalizeColor(color) {
-    // Remove any extra spaces and convert to lowercase
-    color = color.trim();
-    
-    // Handle compound colors
-    if (color === 'navy blue') return 'navy';
-    if (color === 'light blue') return 'lightblue';
-    // Add more compound color handling as needed
-    
-    return color;
-  }
-  
+  // Fetch only relevant categories
+  const relevantCategories = await Category.find({
+    _id: { $in: Array.from(productCategoryIds) }
+  });
+
   const allProperties = {};
   uniqueProducts.forEach(product => {
-    if (product.properties) {
-      Object.entries(product.properties).forEach(([key, value]) => {
-        if (!allProperties[key]) {
-          allProperties[key] = new Set();
-        }
-        if (key.toLowerCase() === 'color' || key.toLowerCase() === 'colors') {
-          if (Array.isArray(value)) {
-            value.forEach(v => allProperties[key].add(normalizeColor(v)));
-          } else {
-            allProperties[key].add(normalizeColor(value));
+    product.variants.forEach(variant => {
+      if (variant.properties) {
+        Object.entries(variant.properties).forEach(([key, values]) => {
+          if (!allProperties[key]) {
+            allProperties[key] = new Set();
           }
-        } else {
-          if (Array.isArray(value)) {
-            value.forEach(v => allProperties[key].add(v));
+          if (Array.isArray(values)) {
+            values.forEach(v => allProperties[key].add(v));
           } else {
-            allProperties[key].add(value);
+            allProperties[key].add(values);
           }
-        }
-      });
-    }
+        });
+      }
+    });
   });
-  
-  // Convert Sets to Arrays and sort them
+
   Object.keys(allProperties).forEach(key => {
     allProperties[key] = Array.from(allProperties[key]).sort();
   });
-  
 
   return {
     props: {
       searchedProducts: JSON.parse(JSON.stringify(uniqueProducts)),
-      categories: JSON.parse(JSON.stringify(allCategories)),
+      categories: JSON.parse(JSON.stringify(relevantCategories)),
       properties: JSON.parse(JSON.stringify(allProperties)),
       query,
       filters: {
@@ -164,62 +147,54 @@ export default function SearchPage({ searchedProducts, query, categories, proper
 
   const applyFilters = () => {
     setLoading(true);
-  
+
     let filtered = searchedProducts.filter(product => {
-      if (currentFilters.minPrice !== '' && product.price < Number(currentFilters.minPrice)) return false;
-      if (currentFilters.maxPrice !== '' && product.price > Number(currentFilters.maxPrice)) return false;
-  
-      if (currentFilters.category && currentFilters.category.length > 0) {
+      const variantPrices = product.variants.map(v => v.price);
+      const minProductPrice = Math.min(...variantPrices);
+      const maxProductPrice = Math.max(...variantPrices);
+
+      if (currentFilters.minPrice !== '' && maxProductPrice < Number(currentFilters.minPrice)) return false;
+      if (currentFilters.maxPrice !== '' && minProductPrice > Number(currentFilters.maxPrice)) return false;
+
+      if (currentFilters.category?.length > 0) {
         if (!currentFilters.category.includes(product.category)) return false;
       }
-  
+
       for (const [key, values] of Object.entries(currentFilters)) {
         if (key.startsWith('property_') && values.length > 0) {
           const propertyName = key.replace('property_', '');
-          if (!product.properties || !product.properties[propertyName]) return false;
           
-          let productValue = product.properties[propertyName];
-          if (propertyName.toLowerCase() === 'color') {
-            productValue = Array.isArray(productValue) 
-              ? productValue.map(normalizeColor) 
-              : [normalizeColor(productValue)];
-          } else {
-            productValue = Array.isArray(productValue) ? productValue : [productValue];
-          }
-          
-          if (!values.some(value => 
-            productValue.some(pValue => 
-              pValue.toString().toLowerCase() === value.toString().toLowerCase()
-            )
-          )) {
-            return false;
-          }
+          const hasMatchingVariant = product.variants.some(variant => {
+            if (!variant.properties || !variant.properties[propertyName]) return false;
+            
+            const variantValues = Array.isArray(variant.properties[propertyName]) 
+              ? variant.properties[propertyName] 
+              : [variant.properties[propertyName]];
+              
+            return values.some(value => 
+              variantValues.some(v => v.toString().toLowerCase() === value.toString().toLowerCase())
+            );
+          });
+
+          if (!hasMatchingVariant) return false;
         }
       }
-  
+
       return true;
     });
-  
+
     if (sortOrder === 'asc') {
-      filtered.sort((a, b) => a.price - b.price);
+      filtered.sort((a, b) => Math.min(...a.variants.map(v => v.price)) - Math.min(...b.variants.map(v => v.price)));
     } else if (sortOrder === 'desc') {
-      filtered.sort((a, b) => b.price - a.price);
+      filtered.sort((a, b) => Math.max(...b.variants.map(v => v.price)) - Math.max(...a.variants.map(v => v.price)));
     }
-  
+
     setFilteredProducts(filtered);
     setLoading(false);
-    setShowFilters(false);
   };
-  
 
   const handleSortChange = (order) => {
-    if (sortOrder === order) {
-      // إذا تم النقر على نفس الخيار، قم بإلغاء الاختيار
-      setSortOrder(null);
-    } else {
-      // إذا تم اختيار خيار جديد، قم بتعيينه
-      setSortOrder(order);
-    }
+    setSortOrder(order === sortOrder ? null : order);
     setCurrentFilters(prev => ({ ...prev, sortOrder: order }));
   };
 
@@ -239,7 +214,7 @@ export default function SearchPage({ searchedProducts, query, categories, proper
   }
 
   return (
-    <div className="mx-auto px-4 py-8">
+    <div className="mx-auto px-4 py-8" dir="rtl">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -256,7 +231,7 @@ export default function SearchPage({ searchedProducts, query, categories, proper
           className="flex items-center bg-gray-500 text-white text-lg px-4 py-2 rounded-lg hover:bg-primary-dark transition"
         >
           <FaFilter className="mr-2" />
-          {showFilters ? 'Hide Filters' : 'Show Filters'}
+          {showFilters ? 'إخفاء الفلاتر' : 'إظهار الفلاتر'}
         </motion.button>
       </motion.div>
 
@@ -270,12 +245,35 @@ export default function SearchPage({ searchedProducts, query, categories, proper
               transition={{ duration: 0.3 }}
               className="col-span-1 bg-gray-500 p-4 rounded-lg shadow-lg"
             >
-              <h2 className="text-xl font-semibold mb-4 text-white">Filters</h2>
+              <h2 className="text-xl font-semibold mb-4 text-white">الفلاتر</h2>
 
-              {/* Price filter */}
+              {categories.length > 0 && (
+                <div className="mb-4">
+                  <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSection('categories')}>
+                    <h3 className="font-semibold text-lg mb-2 text-white">الفئات</h3>
+                    {openSections['categories'] ? <FaChevronUp className="text-white" /> : <FaChevronDown className="text-white" />}
+                  </div>
+                  {openSections['categories'] && (
+                    <div className="space-y-2 mt-2">
+                      {categories.map(cat => (
+                        <label key={cat._id} className="flex items-center text-white">
+                          <input
+                            type="checkbox"
+                            checked={currentFilters.category?.includes(cat._id)}
+                            onChange={() => handleFilterChange('category', cat._id)}
+                            className="mr-2"
+                          />
+                          {cat.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mb-4">
                 <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSection('price')}>
-                  <label className="block text-base font-semibold  text-white">Price Range</label>
+                  <label className="block text-base font-semibold text-white">نطاق السعر</label>
                   {openSections['price'] ? <FaChevronUp className="text-white" /> : <FaChevronDown className="text-white" />}
                 </div>
                 {openSections['price'] && (
@@ -283,7 +281,7 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                     <input
                       type="number"
                       name="minPrice"
-                      placeholder="Min"
+                      placeholder="الحد الأدنى"
                       value={currentFilters.minPrice === '' ? '' : currentFilters.minPrice}
                       onChange={(e) => handleFilterChange('minPrice', e.target.value)}
                       className="w-1/2 border rounded p-2 bg-white"
@@ -291,7 +289,7 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                     <input
                       type="number"
                       name="maxPrice"
-                      placeholder="Max"
+                      placeholder="الحد الأقصى"
                       value={currentFilters.maxPrice === '' ? '' : currentFilters.maxPrice}
                       onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
                       className="w-1/2 border rounded p-2 bg-white"
@@ -300,30 +298,6 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                 )}
               </div>
 
-              {/* Categories filter */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSection('categories')}>
-                  <h3 className="font-semibold text-lg mb-2 text-white">Categories</h3>
-                  {openSections['categories'] ? <FaChevronUp className="text-white" /> : <FaChevronDown className="text-white" />}
-                </div>
-                {openSections['categories'] && (
-                  <div className="space-y-2 mt-2">
-                    {categories.map(cat => (
-                      <label key={cat._id} className="flex items-center text-white">
-                        <input
-                          type="checkbox"
-                          checked={currentFilters.category?.includes(cat._id)}
-                          onChange={() => handleFilterChange('category', cat._id)}
-                          className="mr-2"
-                        />
-                        {cat.name}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Properties filter */}
               {Object.entries(properties).map(([propertyName, values]) => (
                 <div key={propertyName} className="mb-4">
                   <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSection(propertyName)}>
@@ -348,10 +322,9 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                 </div>
               ))}
 
-              {/* Sort order */}
               <div className="mb-4">
                 <div className="flex justify-between items-center cursor-pointer" onClick={() => toggleSection('sortOrder')}>
-                  <h3 className="font-semibold mb-2 text-lg text-white">Sort Order</h3>
+                  <h3 className="font-semibold mb-2 text-lg text-white">الترتيب</h3>
                   {openSections['sortOrder'] ? <FaChevronUp className="text-white" /> : <FaChevronDown className="text-white" />}
                 </div>
                 {openSections['sortOrder'] && (
@@ -364,7 +337,7 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                         className="mr-2"
                       />
                       <FaSortAmountUp className="mr-2 text-sm" />
-                      Price: Low to High
+                      السعر: الأرخص
                     </label>
                     <label className="flex items-center text-base text-white">
                       <input
@@ -374,7 +347,7 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                         className="mr-2"
                       />
                       <FaSortAmountDown className="mr-2 text-sm" />
-                      Price: High to Low
+                      السعر: الأغلى
                     </label>
                   </div>
                 )}
@@ -384,9 +357,9 @@ export default function SearchPage({ searchedProducts, query, categories, proper
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={applyFilters}
-                className="w-full bg-accent text-teal-800 text-xl font-bold p-2 rounded-lg hover:bg-accent-dark transition"
+                className="w-full bg-accent text-white text-xl font-bold p-2 rounded-lg hover:bg-accent-dark transition"
               >
-                Apply Filters
+                تطبيق الفلاتر
               </motion.button>
             </motion.div>
           )}
@@ -401,8 +374,8 @@ export default function SearchPage({ searchedProducts, query, categories, proper
               className="text-center py-8"
             >
               <FaSearch className="mx-auto text-4xl text-gray-400 mb-4" />
-              <h2 className="text-2xl font-semibold">No results found</h2>
-              <p className="text-gray-600 mt-2">Try adjusting your search criteria</p>
+              <h2 className="text-2xl font-semibold">لا توجد نتائج</h2>
+              <p className="text-gray-600 mt-2">حاول تعديل معايير البحث</p>
             </motion.div>
           ) : (
             <ProductsList products={filteredProducts} />

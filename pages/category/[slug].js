@@ -24,28 +24,65 @@ export default function CategoryPage({ category, subcategories, products }) {
   const [openSections, setOpenSections] = useState({});
   const [availableProperties, setAvailableProperties] = useState({});
 
+  const updateAvailableProperties = (productsToFilter) => {
+    const properties = {};
+    
+    productsToFilter.forEach(product => {
+      product.variants.forEach(variant => {
+        Object.entries(variant.properties).forEach(([key, values]) => {
+          if (!properties[key]) {
+            properties[key] = new Set();
+          }
+          (Array.isArray(values) ? values : [values]).forEach(value => {
+            properties[key].add(value);
+          });
+        });
+      });
+    });
+
+    const formattedProperties = {};
+    Object.entries(properties).forEach(([key, values]) => {
+      formattedProperties[key] = Array.from(values);
+    });
+
+    setAvailableProperties(formattedProperties);
+  };
+
   const applyFilters = (productsToFilter) => {
-    let filtered = productsToFilter.filter(product => {
-      if (currentFilters.minPrice !== '' && product.price < Number(currentFilters.minPrice)) return false;
-      if (currentFilters.maxPrice !== '' && product.price > Number(currentFilters.maxPrice)) return false;
+    if (!productsToFilter) return;
+    
+    let filtered = [...productsToFilter].filter(product => {
+      const variantPrices = product.variants.map(v => v.price);
+      const minPrice = Math.min(...variantPrices);
+      
+      if (currentFilters.minPrice !== '' && minPrice < Number(currentFilters.minPrice)) return false;
+      if (currentFilters.maxPrice !== '' && minPrice > Number(currentFilters.maxPrice)) return false;
 
       for (const [key, values] of Object.entries(currentFilters.properties)) {
         if (values.length > 0) {
-          if (!product.properties || !product.properties[key] ||
-            (Array.isArray(product.properties[key])
-              ? !product.properties[key].some(v => values.includes(v))
-              : !values.includes(product.properties[key]))) {
-            return false;
-          }
+          const hasMatchingVariant = product.variants.some(variant => {
+            return values.every(value => {
+              return variant.properties[key]?.includes(value);
+            });
+          });
+          if (!hasMatchingVariant) return false;
         }
       }
       return true;
     });
 
     if (currentFilters.sortOrder === 'asc') {
-      filtered.sort((a, b) => a.price - b.price);
+      filtered.sort((a, b) => {
+        const minPriceA = Math.min(...a.variants.map(v => v.price));
+        const minPriceB = Math.min(...b.variants.map(v => v.price));
+        return minPriceA - minPriceB;
+      });
     } else if (currentFilters.sortOrder === 'desc') {
-      filtered.sort((a, b) => b.price - a.price);
+      filtered.sort((a, b) => {
+        const minPriceA = Math.min(...a.variants.map(v => v.price));
+        const minPriceB = Math.min(...b.variants.map(v => v.price));
+        return minPriceB - minPriceA;
+      });
     }
 
     setFilteredProducts(filtered);
@@ -58,32 +95,10 @@ export default function CategoryPage({ category, subcategories, products }) {
   }, []);
 
   useEffect(() => {
-    const updateAvailableProperties = (productsToFilter) => {
-      const properties = {};
-      productsToFilter.forEach(product => {
-        if (product.properties) {
-          Object.entries(product.properties).forEach(([key, value]) => {
-            if (!properties[key]) {
-              properties[key] = new Set();
-            }
-            if (Array.isArray(value)) {
-              value.forEach(v => properties[key].add(v));
-            } else {
-              properties[key].add(value);
-            }
-          });
-        }
-      });
-
-      Object.keys(properties).forEach(key => {
-        properties[key] = Array.from(properties[key]);
-      });
-
-      setAvailableProperties(properties);
-    };
-
     if (selectedSubcategory) {
-      const subcategoryProducts = products.filter(product => product.category.toString() === selectedSubcategory);
+      const subcategoryProducts = products.filter(product => 
+        product.category.toString() === selectedSubcategory
+      );
       updateAvailableProperties(subcategoryProducts);
       applyFilters(subcategoryProducts);
     } else {
@@ -92,17 +107,11 @@ export default function CategoryPage({ category, subcategories, products }) {
     }
   }, [products, currentFilters, selectedSubcategory]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-100">
-        <Loader />
-      </div>
-    );
-  }
-
   const handleSubcategoryClick = (subcategoryId) => {
     setSelectedSubcategory(subcategoryId);
-    const subcategoryProducts = products.filter(product => product.category.toString() === subcategoryId);
+    const subcategoryProducts = products.filter(product => 
+      product.category.toString() === subcategoryId
+    );
     setFilteredProducts(subcategoryProducts);
     setCurrentFilters({
       minPrice: '',
@@ -141,22 +150,31 @@ export default function CategoryPage({ category, subcategories, products }) {
     }));
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-100">
+        <Loader />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100" dir="rtl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <Link href="/" legacyBehavior>
-        <button
-        className="mt-8 w-full py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-full font-semibold transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-            >
-              العودة إلى الرئيسية
-            </button>
+          <button className="mt-8 w-full py-3 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-full font-semibold transform transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+            العودة إلى الرئيسية
+          </button>
         </Link>
         <h1 className="text-4xl font-bold text-center my-2 text-gray-800">{category.name}</h1>
+        
         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-8">
           {subcategories.map((subcategory) => (
             <div
               key={subcategory._id}
-              className={`flex flex-col items-center cursor-pointer ${selectedSubcategory === subcategory._id.toString() ? '' : ''}`}
+              className={`flex flex-col items-center cursor-pointer ${
+                selectedSubcategory === subcategory._id.toString() ? '' : ''
+              }`}
               onClick={() => handleSubcategoryClick(subcategory._id.toString())}
             >
               {subcategory.image ? (
@@ -176,6 +194,7 @@ export default function CategoryPage({ category, subcategories, products }) {
             </div>
           ))}
         </div>
+
         <div className="mt-2">
           <div className="flex justify-between items-center mb-2">
             <button
@@ -186,6 +205,7 @@ export default function CategoryPage({ category, subcategories, products }) {
               {showFilters ? 'إخفاء الفلاتر' : 'إظهار الفلاتر'}
             </button>
           </div>
+
           <div className="flex flex-col md:flex-row gap-6">
             {showFilters && (
               <div className="md:w-1/4">
@@ -270,6 +290,7 @@ export default function CategoryPage({ category, subcategories, products }) {
                 </div>
               </div>
             )}
+
             <div className={`${showFilters ? 'md:w-3/4' : 'w-full'}`}>
               {filteredProducts.length > 0 ? (
                 <ProductsList products={filteredProducts} />
@@ -319,7 +340,7 @@ const RadioButton = ({ label, name, value, checked, onChange }) => (
       className="form-radio text-blue-600"
     />
     <span className="text-lg">{label}</span>
-    </label>
+  </label>
 );
 
 const Checkbox = ({ label, checked, onChange }) => (
@@ -331,7 +352,7 @@ const Checkbox = ({ label, checked, onChange }) => (
       className="form-checkbox text-blue-600"
     />
     <span className="text-base">{label}</span>
-    </label>
+  </label>
 );
 
 export async function getServerSideProps({ params }) {
@@ -346,6 +367,7 @@ export async function getServerSideProps({ params }) {
     const products = await Product.find({
       category: { $in: [category._id, ...subcategoryIds] }
     }).lean();
+    
     return {
       props: {
         category: JSON.parse(JSON.stringify(category)),
