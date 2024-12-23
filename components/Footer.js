@@ -82,7 +82,7 @@ export default function Footer() {
             <Link href="/">
               <Image src="/logo.png" alt="الشعار" width={100} height={40} className="mb-4" />
             </Link>
-            <p className="text-gray-400 text-base">© 2024 اسم متجرك. جميع الحقوق محفوظة.</p>
+            <p className="text-gray-400 text-base">© 2024 هتاري. جميع الحقوق محفوظة.</p>
           </div>
 
           <FooterSection title="روابط سريعة" items={QuickLinks} />
