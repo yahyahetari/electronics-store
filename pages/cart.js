@@ -1,6 +1,6 @@
 import { CartContext } from "@/components/CartContext";
 import axios from "axios";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { MinusCircle, PlusCircle, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/router";
@@ -15,15 +15,16 @@ export default function Cart() {
     const { cart, setCart } = useContext(CartContext);
     const [products, setProducts] = useState([]);
     const [productToDelete, setProductToDelete] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // حالة الـ Loader
     const [loadingProducts, setLoadingProducts] = useState({});
     const [prevTotals, setPrevTotals] = useState({});
 
-    const total = products.reduce(
+    const total = useMemo(() => products.reduce(
         (acc, product) => acc + product.price * product.quantity,
         0
-    );
-    const totalRounded = parseFloat(total.toFixed(2));
+    ), [products]);
+
+    const totalRounded = useMemo(() => parseFloat(total.toFixed(2)), [total]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -32,10 +33,6 @@ export default function Cart() {
                 setCart(JSON.parse(storedCart));
             }
         }
-        const timer = setTimeout(() => {
-            setLoading(false);
-        }, 2000);
-        return () => clearTimeout(timer);
     }, [setCart]);
 
     useEffect(() => {
@@ -43,15 +40,23 @@ export default function Cart() {
             axios.post('/api/cart', { items: cart }).then((response) => {
                 const groupedProducts = groupProductsByProperties(response.data);
                 setProducts(groupedProducts);
-                setLoading(false);
+
+                // تأخير إخفاء الـ Loader لمدة 3 ثوانٍ
+                setTimeout(() => {
+                    setLoading(false);
+                }, 3000);
             });
         } else {
             setProducts([]);
-            setLoading(false);
+
+            // تأخير إخفاء الـ Loader لمدة 3 ثوانٍ حتى لو كانت السلة فارغة
+            setTimeout(() => {
+                setLoading(false);
+            }, 3000);
         }
     }, [cart]);
 
-    function groupProductsByProperties(products) {
+    const groupProductsByProperties = useCallback((products) => {
         const groupedProducts = [];
 
         cart.forEach(cartItem => {
@@ -78,10 +83,9 @@ export default function Cart() {
         });
 
         return groupedProducts;
-    }
+    }, [cart]);
 
-
-    function increaseQuantity(id, properties) {
+    const increaseQuantity = useCallback((id, properties) => {
         const targetProduct = products.find(p => 
             p._id === id && 
             JSON.stringify(p.properties) === JSON.stringify(properties)
@@ -117,10 +121,9 @@ export default function Cart() {
             setCart(updatedCart);
             updateLocalStorage(updatedCart);
         }
-    }
-    
-    
-    function decreaseQuantity(id, properties) {
+    }, [cart, products, setCart]);
+
+    const decreaseQuantity = useCallback((id, properties) => {
         const productKey = `${id}-${JSON.stringify(properties)}`;
         setLoadingProducts(prev => ({ ...prev, [productKey]: true }));
     
@@ -162,33 +165,32 @@ export default function Cart() {
         setTimeout(() => {
             setLoadingProducts(prev => ({ ...prev, [productKey]: false }));
         }, 1000);
-    }
-    
-       
+    }, [cart, products, setCart]);
 
-    function confirmDeleteProduct() {
+    const confirmDeleteProduct = useCallback(() => {
         if (productToDelete) {
             const updatedCart = cart.filter(item => !(item.id === productToDelete._id && JSON.stringify(item.properties) === JSON.stringify(productToDelete.properties)));
             setCart(updatedCart);
             updateLocalStorage(updatedCart);
             setProductToDelete(null);
         }
-    }
+    }, [cart, productToDelete, setCart]);
 
-    function cancelDelete() {
+    const cancelDelete = useCallback(() => {
         setProductToDelete(null);
-    }
+    }, []);
 
-    function updateLocalStorage(newCart) {
+    const updateLocalStorage = useCallback((newCart) => {
         if (typeof window !== "undefined") {
             localStorage.setItem("cart", JSON.stringify(newCart));
         }
-    }
+    }, []);
 
-    const handleCheckout = () => {
+    const handleCheckout = useCallback(() => {
         router.push('/checkout');
-    };
+    }, [router]);
 
+    // إظهار الـ Loader لمدة 3 ثوانٍ
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -223,6 +225,7 @@ export default function Cart() {
                                             height={100}
                                             className="rounded-lg ml-3 -mr-1.5 w-32 h-40 object-cover object-top cursor-pointer"
                                             alt={product.title}
+                                            loading="lazy"
                                         />
                                     </Link>
                                     <div className="flex flex-col gap-4 mr-4">
