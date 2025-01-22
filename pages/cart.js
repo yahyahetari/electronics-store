@@ -15,10 +15,11 @@ export default function Cart() {
     const { cart, setCart } = useContext(CartContext);
     const [products, setProducts] = useState([]);
     const [productToDelete, setProductToDelete] = useState(null);
-    const [loading, setLoading] = useState(true); // حالة الـ Loader
+    const [loading, setLoading] = useState(true);
     const [loadingProducts, setLoadingProducts] = useState({});
     const [prevTotals, setPrevTotals] = useState({});
 
+    // حساب الإجمالي باستخدام useMemo لتجنب إعادة الحساب في كل render
     const total = useMemo(() => products.reduce(
         (acc, product) => acc + product.price * product.quantity,
         0
@@ -26,6 +27,7 @@ export default function Cart() {
 
     const totalRounded = useMemo(() => parseFloat(total.toFixed(2)), [total]);
 
+    // جلب بيانات السلة من localStorage عند التحميل
     useEffect(() => {
         if (typeof window !== "undefined") {
             const storedCart = localStorage.getItem("cart");
@@ -35,27 +37,23 @@ export default function Cart() {
         }
     }, [setCart]);
 
+    // جلب بيانات المنتجات من الخادم
     useEffect(() => {
         if (cart.length > 0) {
             axios.post('/api/cart', { items: cart }).then((response) => {
                 const groupedProducts = groupProductsByProperties(response.data);
                 setProducts(groupedProducts);
-
-                // تأخير إخفاء الـ Loader لمدة 3 ثوانٍ
-                setTimeout(() => {
-                    setLoading(false);
-                }, 3000);
+                setLoading(false); // إزالة التأخير
+            }).catch(() => {
+                setLoading(false); // إخفاء الـ Loader في حالة الخطأ
             });
         } else {
             setProducts([]);
-
-            // تأخير إخفاء الـ Loader لمدة 3 ثوانٍ حتى لو كانت السلة فارغة
-            setTimeout(() => {
-                setLoading(false);
-            }, 3000);
+            setLoading(false); // إخفاء الـ Loader إذا كانت السلة فارغة
         }
     }, [cart]);
 
+    // تجميع المنتجات بناءً على الخصائص
     const groupProductsByProperties = useCallback((products) => {
         const groupedProducts = [];
 
@@ -85,6 +83,7 @@ export default function Cart() {
         return groupedProducts;
     }, [cart]);
 
+    // زيادة الكمية
     const increaseQuantity = useCallback((id, properties) => {
         const targetProduct = products.find(p => 
             p._id === id && 
@@ -112,17 +111,12 @@ export default function Cart() {
                 variantId: targetProduct.variantId
             });
             
-            const newTotal = targetProduct.price * (targetProduct.quantity + 1);
-            setPrevTotals(prev => ({
-                ...prev,
-                [`${id}-${JSON.stringify(properties)}`]: newTotal
-            }));
-            
             setCart(updatedCart);
             updateLocalStorage(updatedCart);
         }
     }, [cart, products, setCart]);
 
+    // تقليل الكمية
     const decreaseQuantity = useCallback((id, properties) => {
         const productKey = `${id}-${JSON.stringify(properties)}`;
         setLoadingProducts(prev => ({ ...prev, [productKey]: true }));
@@ -149,24 +143,19 @@ export default function Cart() {
                 const updatedCart = [...cart];
                 updatedCart.splice(productIndices[productIndices.length - 1], 1);
                 
-                const newTotal = targetProduct.price * (productCount - 1);
-                setPrevTotals(prev => ({
-                    ...prev,
-                    [productKey]: newTotal
-                }));
-                
                 setCart(updatedCart);
                 updateLocalStorage(updatedCart);
             } else {
-                setProductToDelete(targetProduct);  // Now passing the full product object
+                setProductToDelete(targetProduct);
             }
         }
     
         setTimeout(() => {
             setLoadingProducts(prev => ({ ...prev, [productKey]: false }));
-        }, 1000);
+        }, 500); // تقليل وقت التأخير
     }, [cart, products, setCart]);
 
+    // تأكيد حذف المنتج
     const confirmDeleteProduct = useCallback(() => {
         if (productToDelete) {
             const updatedCart = cart.filter(item => !(item.id === productToDelete._id && JSON.stringify(item.properties) === JSON.stringify(productToDelete.properties)));
@@ -176,21 +165,24 @@ export default function Cart() {
         }
     }, [cart, productToDelete, setCart]);
 
+    // إلغاء حذف المنتج
     const cancelDelete = useCallback(() => {
         setProductToDelete(null);
     }, []);
 
+    // تحديث localStorage
     const updateLocalStorage = useCallback((newCart) => {
         if (typeof window !== "undefined") {
             localStorage.setItem("cart", JSON.stringify(newCart));
         }
     }, []);
 
+    // الانتقال إلى صفحة الدفع
     const handleCheckout = useCallback(() => {
         router.push('/checkout');
     }, [router]);
 
-    // إظهار الـ Loader لمدة 3 ثوانٍ
+    // إظهار الـ Loader أثناء التحميل
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen">
