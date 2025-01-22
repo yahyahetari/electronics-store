@@ -18,22 +18,18 @@ const VerificationForm = ({ onVerify, correctCode }) => {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim(); // إزالة المسافات الزائدة
-    const numbersOnly = pastedData.replace(/\D/g, ''); // إزالة أي أحرف غير رقمية
+    const pastedData = e.clipboardData.getData('text').trim();
+    const numbersOnly = pastedData.replace(/\D/g, '');
 
     if (numbersOnly.length !== 6) {
       setError('الرجاء لصق رمز تحقق مكون من 6 أرقام');
       return;
     }
 
-    const newCode = [...code];
-    for (let i = 0; i < 6; i++) {
-      newCode[i] = numbersOnly[i] || '';
-    }
+    const newCode = numbersOnly.split('');
     setCode(newCode);
     setError('');
 
-    // نقل التركيز إلى الحقل الأخير
     inputRefs.current[5].focus();
   };
 
@@ -60,7 +56,7 @@ const VerificationForm = ({ onVerify, correctCode }) => {
     <form onSubmit={handleSubmit} className="flex flex-col items-center">
       <h2 className="text-white text-2xl mb-4">أدخل رمز التحقق</h2>
       {error && <p className="text-red-500 text-xl mb-4">{error}</p>}
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center mb-4" onPaste={handlePaste}>
         {code.map((digit, index) => (
           <input
             key={index}
@@ -70,7 +66,6 @@ const VerificationForm = ({ onVerify, correctCode }) => {
             maxLength="1"
             value={digit}
             onChange={(e) => handleChange(index, e.target.value)}
-            onPaste={handlePaste}
             className="w-12 h-12 mx-1 text-2xl text-center border-2 border-[#01939c] rounded-md bg-transparent text-white"
           />
         ))}
