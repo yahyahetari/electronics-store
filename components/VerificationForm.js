@@ -11,8 +11,8 @@ const VerificationForm = ({ onVerify, correctCode }) => {
     setCode(newCode);
     setError('');
 
-    if (value && index < 5) {
-      inputRefs.current[index + 1].focus();
+    if (value && index > 0) {
+      inputRefs.current[index - 1].focus();
     }
   };
 
@@ -27,9 +27,9 @@ const VerificationForm = ({ onVerify, correctCode }) => {
     setError('');
 
     if (pastedData.length === 6) {
-      inputRefs.current[5].focus();
+      inputRefs.current[0].focus();
     } else {
-      inputRefs.current[pastedData.length].focus();
+      inputRefs.current[5 - pastedData.length].focus();
     }
   };
 
@@ -53,19 +53,19 @@ const VerificationForm = ({ onVerify, correctCode }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col items-center">
+    <form onSubmit={handleSubmit} className="flex flex-col items-center" dir="rtl">
       <h2 className="text-white text-2xl mb-4">أدخل رمز التحقق</h2>
-        {error && <p className="text-red-500 text-xl mb-4">{error}</p>}
-      <div className="flex justify-center mb-4">
+      {error && <p className="text-red-500 text-xl mb-4">{error}</p>}
+      <div className="flex flex-row-reverse justify-center mb-4">
         {code.map((digit, index) => (
           <input
             key={index}
-            ref={(el) => (inputRefs.current[index] = el)}
-            id={`code-${index}`}
+            ref={(el) => (inputRefs.current[5 - index] = el)}
+            id={`code-${5 - index}`}
             type="text"
             maxLength="1"
             value={digit}
-            onChange={(e) => handleChange(index, e.target.value)}
+            onChange={(e) => handleChange(5 - index, e.target.value)}
             onPaste={handlePaste}
             className="w-12 h-12 mx-1 text-2xl text-center border-2 border-[#01939c] rounded-md bg-transparent text-white"
           />
