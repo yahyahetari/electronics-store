@@ -57,8 +57,8 @@ export default function Auth({ onClose }) {
             password: formData.signup_password
           })
         });
+        
         if (response.ok) {
-          // Generate and send verification code
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           setVerificationCode(code);
           await fetch('/api/send-verification', {
@@ -72,43 +72,49 @@ export default function Auth({ onClose }) {
           setError(data.error || 'Signup failed');
         }
       } else {
-        await handleSignIn(formData.login_email, formData.login_password);
+        // Generate and send verification code for login
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        setVerificationCode(code);
+        await fetch('/api/send-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.login_email, code })
+        });
+        setShowVerification(true);
       }
     } catch (error) {
       setError('An error occurred');
     }
   };
 
-  const handleSignIn = async (email, password) => {
-    const result = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    });
-    if (result.error) {
-      setError(result.error);
-    } else if (!result.ok) {
-      setError('Failed to sign in');
-    } else {
-      onClose();
-    }
-  };
-
   const handleVerify = async (enteredCode) => {
     if (enteredCode === verificationCode) {
       try {
-        const response = await fetch('/api/verify-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.signup_email })
-        });
-        if (response.ok) {
-          await handleSignIn(formData.signup_email, formData.signup_password);
+        if (activeTab === 'signup') {
+          const response = await fetch('/api/verify-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.signup_email })
+          });
+          
+          if (response.ok) {
+            const result = await signIn("credentials", {
+              redirect: false,
+              email: formData.signup_email,
+              password: formData.signup_password
+            });
+            if (!result.error) onClose();
+          }
         } else {
-          setError('Failed to verify user');
+          const result = await signIn("credentials", {
+            redirect: false,
+            email: formData.login_email,
+            password: formData.login_password
+          });
+          if (!result.error) onClose();
         }
       } catch (error) {
-        setError('An error occurred during verification');
+        setError('Verification failed');
       }
     } else {
       setError('Invalid verification code');
@@ -125,9 +131,9 @@ export default function Auth({ onClose }) {
 
   if (!session || (session && !isVerified)) {
     return (
-      <div className="flex items-center justify-center min-h-scree bg-bg-img bg-cover h-screen bg-glass overflow-y-hidden">
+      <div className="flex items-center justify-center min-h-screen bg-bg-img bg-cover h-screen bg-glass overflow-y-hidden">
         <div className="w-full max-w-[600px] mx-auto my-5">
-          <div className=" bg-[#464646] p-10 rounded-2xl shadow-[0_4px_10px_4px_rgba(19,35,47,3)]">
+          <div className="bg-[#464646] p-10 rounded-2xl shadow-[0_4px_10px_4px_rgba(19,35,47,3)]">
             {showVerification ? (
               <VerificationForm onVerify={handleVerify} correctCode={verificationCode} />
             ) : (
@@ -137,10 +143,11 @@ export default function Auth({ onClose }) {
                     <a
                       href="#signup"
                       onClick={(e) => handleTabClick(e, 'signup')}
-                      className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${activeTab === 'signup'
-                        ? 'bg-[#01939c] text-white'
-                        : 'bg-[rgba(160,179,176,0.25)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'
-                        }`}
+                      className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${
+                        activeTab === 'signup'
+                          ? 'bg-[#01939c] text-white'
+                          : 'bg-[rgba(160,179,176,0.25)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'
+                      }`}
                     >
                       حساب جديد
                     </a>
@@ -149,10 +156,11 @@ export default function Auth({ onClose }) {
                     <a
                       href="#login"
                       onClick={(e) => handleTabClick(e, 'login')}
-                      className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${activeTab === 'login'
-                        ? 'bg-[#01939c] text-white'
-                        : 'bg-[rgba(160,179,176,0.25)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'
-                        }`}
+                      className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${
+                        activeTab === 'login'
+                          ? 'bg-[#01939c] text-white'
+                          : 'bg-[rgba(160,179,176,0.25)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'
+                      }`}
                     >
                       تسجيل الدخول
                     </a>
@@ -191,7 +199,7 @@ export default function Auth({ onClose }) {
                           autoComplete="new-email"
                         />
                       </div>
-                      <div className="mb-8 relative " >
+                      <div className="mb-8 relative">
                         <input
                           type={showSignupPassword ? "text" : "password"}
                           required
@@ -201,7 +209,6 @@ export default function Auth({ onClose }) {
                           className="text-lg w-full py-2.5 px-4 pl-10 bg-transparent border border-[#01939c] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#179b77]"
                           placeholder="كلمة المرور"
                           autoComplete="new-password"
-
                         />
                         <button
                           type="button"
@@ -221,7 +228,9 @@ export default function Auth({ onClose }) {
                         </button>
                       </div>
 
-                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#01939c] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#179b77]">تسجيل</button>
+                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#01939c] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#179b77]">
+                        تسجيل
+                      </button>
                     </form>
                   </div>
                   <div id="login" style={{ display: activeTab === 'login' ? 'block' : 'none' }}>
@@ -268,7 +277,9 @@ export default function Auth({ onClose }) {
                         </button>
                       </div>
 
-                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#01939c] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#179b77]">تسجيل الدخول</button>
+                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#01939c] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#179b77]">
+                        تسجيل الدخول
+                      </button>
                     </form>
                   </div>
                 </div>
@@ -281,5 +292,5 @@ export default function Auth({ onClose }) {
   }
 
   onClose();
-  return <div>{children}</div>;
+  return null;
 }
