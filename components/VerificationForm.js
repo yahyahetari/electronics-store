@@ -6,47 +6,31 @@ const VerificationForm = ({ onVerify, correctCode }) => {
   const inputRefs = useRef([]);
 
   const handleChange = (index, value) => {
-    // تقبل الأرقام فقط
-    if (!/^\d*$/.test(value)) return;
-
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
     setError('');
 
-    // الانتقال التلقائي للخانة التالية عند إدخال رقم
     if (value && index < 5) {
       inputRefs.current[index + 1].focus();
-    }
-    
-    // الرجوع للخانة السابقة عند الحذف
-    if (value === '' && index > 0) {
-      inputRefs.current[index - 1].focus();
-    }
-  };
-
-  const handleKeyDown = (index, e) => {
-    // الرجوع للخانة السابقة عند الضغط على Backspace
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
     }
   };
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim();
-    const numbersOnly = pastedData.replace(/\D/g, '');
-
-    if (numbersOnly.length !== 6) {
-      setError('الرجاء لصق رمز تحقق مكون من 6 أرقام');
-      return;
+    const pastedData = e.clipboardData.getData('text').slice(0, 6);
+    const newCode = [...code];
+    for (let i = 0; i < pastedData.length; i++) {
+      newCode[i] = pastedData[i];
     }
-
-    const newCode = numbersOnly.split('');
     setCode(newCode);
     setError('');
 
-    inputRefs.current[5].focus();
+    if (pastedData.length === 6) {
+      inputRefs.current[5].focus();
+    } else {
+      inputRefs.current[pastedData.length].focus();
+    }
   };
 
   const handleSubmit = (e) => {
@@ -71,8 +55,8 @@ const VerificationForm = ({ onVerify, correctCode }) => {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col items-center">
       <h2 className="text-white text-2xl mb-4">أدخل رمز التحقق</h2>
-      {error && <p className="text-red-500 text-xl mb-4">{error}</p>}
-      <div className="flex justify-center mb-4" onPaste={handlePaste}>
+        {error && <p className="text-red-500 text-xl mb-4">{error}</p>}
+      <div className="flex justify-center mb-4">
         {code.map((digit, index) => (
           <input
             key={index}
@@ -82,7 +66,7 @@ const VerificationForm = ({ onVerify, correctCode }) => {
             maxLength="1"
             value={digit}
             onChange={(e) => handleChange(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
+            onPaste={handlePaste}
             className="w-12 h-12 mx-1 text-2xl text-center border-2 border-[#01939c] rounded-md bg-transparent text-white"
           />
         ))}
