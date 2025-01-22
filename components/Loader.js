@@ -1,15 +1,9 @@
-import { SkewLoader } from "react-spinners";
-
-export default function Loader() {
+const Loader = () => {
     return (
-        <SkewLoader 
-            color={'#eb0000'} 
-            speedMultiplier={2} 
-            size={60} 
-            cssOverride={{
-                animation: 'loader-animation 1s ease-in-out infinite',
-                transform: 'rotate(180deg)'
-            }}
-        />
-    )
-}
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-blue-600"></div>
+      </div>
+    );
+  };
+  
+  export default Loader;
