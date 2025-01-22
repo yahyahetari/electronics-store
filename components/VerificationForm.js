@@ -6,13 +6,29 @@ const VerificationForm = ({ onVerify, correctCode }) => {
   const inputRefs = useRef([]);
 
   const handleChange = (index, value) => {
+    // تقبل الأرقام فقط
+    if (!/^\d*$/.test(value)) return;
+
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
     setError('');
 
+    // الانتقال التلقائي للخانة التالية عند إدخال رقم
     if (value && index < 5) {
       inputRefs.current[index + 1].focus();
+    }
+    
+    // الرجوع للخانة السابقة عند الحذف
+    if (value === '' && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    // الرجوع للخانة السابقة عند الضغط على Backspace
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
     }
   };
 
@@ -66,6 +82,7 @@ const VerificationForm = ({ onVerify, correctCode }) => {
             maxLength="1"
             value={digit}
             onChange={(e) => handleChange(index, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(index, e)}
             className="w-12 h-12 mx-1 text-2xl text-center border-2 border-[#01939c] rounded-md bg-transparent text-white"
           />
         ))}
