@@ -18,6 +18,12 @@ export default function SEO({ title = 'هتاري - متجر الهواتف ال
           href: process.env.PUBLIC_STORE_URL,
         },
       ]}
+      additionalMetaTags={[
+        {
+          name: 'keywords',
+          content: 'هواتف محمولة, إكسسوارات تقنية, متجر هتاري, أحدث الهواتف, أسعار تنافسية',
+        },
+      ]}
     />
   );
 }
