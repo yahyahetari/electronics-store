@@ -28,7 +28,7 @@ export default async function handler(req, res) {
             return {
                 quantity: cartItem.quantity,
                 price_data: {
-                    currency: 'AED',
+                    currency: 'SAR',
                     product_data: {
                         name: productInfo.title,
                         description: cartItem.properties ? 
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         line_items.push({
             quantity: 1,
             price_data: {
-                currency: 'AED',
+                currency: 'SAR',
                 product_data: {
                     name: 'رسوم التوصيل',
                     description: 'خدمة التوصيل'
