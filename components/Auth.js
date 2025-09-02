@@ -72,18 +72,50 @@ export default function Auth({ onClose }) {
           setError(data.error || 'Signup failed');
         }
       } else {
-        // Generate and send verification code for login
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        setVerificationCode(code);
-        await fetch('/api/send-verification', {
+        // التحقق من حالة التحقق للمستخدم أولاً
+        const checkUserResponse = await fetch('/api/check-user-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.login_email, code })
+          body: JSON.stringify({ 
+            email: formData.login_email,
+            password: formData.login_password 
+          })
         });
-        setShowVerification(true);
+
+        if (checkUserResponse.ok) {
+          const userData = await checkUserResponse.json();
+          
+          if (userData.isVerified) {
+            // المستخدم تم التحقق منه مسبقاً، تسجيل دخول مباشر
+            const result = await signIn("credentials", {
+              redirect: false,
+              email: formData.login_email,
+              password: formData.login_password
+            });
+            
+            if (result.error) {
+              setError('بيانات تسجيل الدخول غير صحيحة');
+            } else {
+              onClose();
+            }
+          } else {
+            // المستخدم غير مُتحقق منه، إرسال رمز التحقق
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            setVerificationCode(code);
+            await fetch('/api/send-verification', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: formData.login_email, code })
+            });
+            setShowVerification(true);
+          }
+        } else {
+          const errorData = await checkUserResponse.json();
+          setError(errorData.error || 'بيانات تسجيل الدخول غير صحيحة');
+        }
       }
     } catch (error) {
-      setError('An error occurred');
+      setError('حدث خطأ ما');
     }
   };
 
@@ -106,6 +138,13 @@ export default function Auth({ onClose }) {
             if (!result.error) onClose();
           }
         } else {
+          // تحديث حالة التحقق للمستخدم
+          await fetch('/api/verify-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.login_email })
+          });
+
           const result = await signIn("credentials", {
             redirect: false,
             email: formData.login_email,
@@ -114,10 +153,10 @@ export default function Auth({ onClose }) {
           if (!result.error) onClose();
         }
       } catch (error) {
-        setError('Verification failed');
+        setError('فشل التحقق');
       }
     } else {
-      setError('Invalid verification code');
+      setError('رمز التحقق غير صحيح');
     }
   };
 
