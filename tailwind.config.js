@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       backgroundImage: {
-        'bg-img': "url('/yahya.jpg')",
+        'bg-img': "",
       },
       backdropFilter: {
         'glass': 'blur(10px)',
