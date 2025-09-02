@@ -72,15 +72,43 @@ export default function Auth({ onClose }) {
           setError(data.error || 'Signup failed');
         }
       } else {
-        // Generate and send verification code for login
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        setVerificationCode(code);
-        await fetch('/api/send-verification', {
+        // التحقق من حالة التحقق للمستخدم
+        const checkUserResponse = await fetch('/api/check-user-verification', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.login_email, code })
+          body: JSON.stringify({ email: formData.login_email })
         });
-        setShowVerification(true);
+
+        if (checkUserResponse.ok) {
+          const userData = await checkUserResponse.json();
+          
+          if (userData.isVerified) {
+            // المستخدم محقق، تسجيل الدخول مباشرة
+            const result = await signIn("credentials", {
+              redirect: false,
+              email: formData.login_email,
+              password: formData.login_password
+            });
+            
+            if (result.error) {
+              setError('خطأ في البريد الإلكتروني أو كلمة المرور');
+            } else {
+              onClose();
+            }
+          } else {
+            // المستخدم غير محقق، إرسال رمز التحقق
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            setVerificationCode(code);
+            await fetch('/api/send-verification', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: formData.login_email, code })
+            });
+            setShowVerification(true);
+          }
+        } else {
+          setError('خطأ في التحقق من المستخدم');
+        }
       }
     } catch (error) {
       setError('An error occurred');
@@ -106,12 +134,21 @@ export default function Auth({ onClose }) {
             if (!result.error) onClose();
           }
         } else {
-          const result = await signIn("credentials", {
-            redirect: false,
-            email: formData.login_email,
-            password: formData.login_password
+          // تحديث حالة التحقق للمستخدم
+          const verifyResponse = await fetch('/api/verify-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.login_email })
           });
-          if (!result.error) onClose();
+
+          if (verifyResponse.ok) {
+            const result = await signIn("credentials", {
+              redirect: false,
+              email: formData.login_email,
+              password: formData.login_password
+            });
+            if (!result.error) onClose();
+          }
         }
       } catch (error) {
         setError('Verification failed');
