@@ -14,112 +14,55 @@ export const authOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        try {
-          // التحقق من وجود البيانات المطلوبة
-          if (!credentials?.email || !credentials?.password) {
-            console.log('Missing email or password');
-            return null;
-          }
-
-          const client = await clientPromise;
-          const usersCollection = client.db().collection("users");
-          
-          const user = await usersCollection.findOne({ 
-            email: credentials.email.toLowerCase() 
-          });
-          
-          console.log('User found:', user ? 'Yes' : 'No');
-          
-          if (!user) {
-            console.log('User not found for email:', credentials.email);
-            return null;
-          }
-          
-          // التحقق من كلمة المرور
-          const isPasswordValid = await compare(credentials.password, user.password);
-          console.log('Password valid:', isPasswordValid);
-          
-          if (!isPasswordValid) {
-            console.log('Invalid password for user:', credentials.email);
-            return null;
-          }
-          
-          // التحقق من حالة التحقق
+        const client = await clientPromise;
+        const usersCollection = client.db().collection("users");
+        
+        const user = await usersCollection.findOne({ email: credentials.email });
+        
+        if (user && await compare(credentials.password, user.password)) {
           if (!user.isVerified) {
-            console.log('User not verified:', credentials.email);
             throw new Error("يرجى التحقق من بريدك الإلكتروني قبل تسجيل الدخول");
           }
-          
-          console.log('User authenticated successfully:', user.email);
-          
-          return {
-            id: user._id.toString(),
-            name: user.name,
-            email: user.email,
-            isVerified: user.isVerified,
-            image: user.image || '/user.jpg'
-          };
-        } catch (error) {
-          console.error('Auth error:', error);
-          if (error.message.includes('التحقق من بريدك الإلكتروني')) {
-            throw error; // إعادة رمي خطأ التحقق
-          }
+          return { id: user._id.toString(), name: user.name, email: user.email, isVerified: user.isVerified };
+        } else {
           return null;
         }
       }
     })
   ],
-  
-  // إزالة MongoDB adapter عند استخدام credentials
-  // adapter: MongoDBAdapter(clientPromise), // احذف هذا السطر
-  
+  adapter: MongoDBAdapter(clientPromise),
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.isVerified = user.isVerified;
+        // إضافة الصورة إلى الtoken
         token.picture = user.image;
       }
       return token;
     },
-    
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.isVerified = token.isVerified;
-        session.user.image = token.picture;
-        
-        // تحديث الصورة من قاعدة البيانات
-        try {
-          const client = await clientPromise;
-          const usersCollection = client.db().collection("users");
-          const dbUser = await usersCollection.findOne({ email: session.user.email });
-          if (dbUser?.image) {
-            session.user.image = dbUser.image;
-          }
-        } catch (error) {
-          console.error('Error updating session image:', error);
-        }
+    async session({ session, token, user }) {
+      session.user.id = token.id;
+      session.user.isVerified = token.isVerified;
+      // إضافة الصورة إلى session
+      session.user.image = token.picture;
+
+      // تحديث الصورة من قاعدة البيانات
+      const client = await clientPromise;
+      const usersCollection = client.db().collection("users");
+      const dbUser = await usersCollection.findOne({ email: session.user.email });
+      if (dbUser?.image) {
+        session.user.image = dbUser.image;
       }
+
       return session;
     },
-    
-    async signIn({ user, account, profile, email, credentials }) {
-      // السماح بتسجيل الدخول إذا كان المستخدم محقق
-      return user?.isVerified === true;
-    }
   },
   
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  
-  pages: {
-    signIn: '/auth', // صفحة تسجيل الدخول المخصصة
-    error: '/auth', // صفحة الأخطاء
-  },
-  
   debug: process.env.NODE_ENV === 'development',
 };
 
