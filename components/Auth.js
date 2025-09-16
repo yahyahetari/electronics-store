@@ -43,6 +43,25 @@ export default function Auth({ onClose }) {
     }));
   };
 
+  // دالة للتحقق من حالة المستخدم
+  const checkUserVerificationStatus = async (email) => {
+    try {
+      const response = await fetch(`/api/user-verification-status?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.isVerified;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking user verification status:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -59,6 +78,7 @@ export default function Auth({ onClose }) {
         });
 
         if (response.ok) {
+          // للتسجيل الجديد، دائماً أرسل رمز التحقق
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           setVerificationCode(code);
           await fetch('/api/send-verification', {
@@ -72,15 +92,33 @@ export default function Auth({ onClose }) {
           setError(data.error || 'Signup failed');
         }
       } else {
-        // Generate and send verification code for login
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        setVerificationCode(code);
-        await fetch('/api/send-verification', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.login_email, code })
-        });
-        setShowVerification(true);
+        // للدخول، تحقق أولاً من حالة المستخدم
+        const isUserVerified = await checkUserVerificationStatus(formData.login_email);
+        
+        if (isUserVerified) {
+          // المستخدم محقق، سجل الدخول مباشرة
+          const result = await signIn("credentials", {
+            redirect: false,
+            email: formData.login_email,
+            password: formData.login_password
+          });
+          
+          if (result.error) {
+            setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+          } else {
+            onClose();
+          }
+        } else {
+          // المستخدم غير محقق، أرسل رمز التحقق
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          setVerificationCode(code);
+          await fetch('/api/send-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.login_email, code })
+          });
+          setShowVerification(true);
+        }
       }
     } catch (error) {
       setError('An error occurred');
@@ -106,6 +144,14 @@ export default function Auth({ onClose }) {
             if (!result.error) onClose();
           }
         } else {
+          // أولاً، قم بتحديث حالة التحقق في قاعدة البيانات
+          await fetch('/api/verify-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.login_email })
+          });
+
+          // ثم سجل الدخول
           const result = await signIn("credentials", {
             redirect: false,
             email: formData.login_email,
