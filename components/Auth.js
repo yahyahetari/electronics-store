@@ -25,7 +25,6 @@ export default function Auth({ onClose }) {
     const timer = setTimeout(() => {
       setLoading(false);
     }, 5000);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -43,21 +42,23 @@ export default function Auth({ onClose }) {
     }));
   };
 
-  // دالة للتحقق من حالة المستخدم
   const checkUserVerificationStatus = async (email) => {
     try {
+      console.log('🔍 Checking verification for:', email);
       const response = await fetch(`/api/user-verification-status?email=${encodeURIComponent(email)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-
+      console.log('📡 Response status:', response.status);
       if (response.ok) {
         const data = await response.json();
-        return data.isVerified;
+        console.log('✅ User data:', data);
+        return data.isVerified === true;
       }
+      console.log('⚠️ Response not ok');
       return false;
     } catch (error) {
-      console.error('Error checking user verification status:', error);
+      console.error('❌ Error checking verification:', error);
       return false;
     }
   };
@@ -76,9 +77,7 @@ export default function Auth({ onClose }) {
             password: formData.signup_password
           })
         });
-
         if (response.ok) {
-          // للتسجيل الجديد، دائماً أرسل رمز التحقق
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           setVerificationCode(code);
           await fetch('/api/send-verification', {
@@ -89,81 +88,81 @@ export default function Auth({ onClose }) {
           setShowVerification(true);
         } else {
           const data = await response.json();
-          setError(data.error || 'Signup failed');
+          setError(data.error || 'فشل التسجيل');
         }
       } else {
-        // للدخول، تحقق أولاً من حالة المستخدم
+        console.log('🔐 Attempting login for:', formData.login_email);
         const isUserVerified = await checkUserVerificationStatus(formData.login_email);
-        
+        console.log('✓ Is user verified?', isUserVerified);
         if (isUserVerified) {
-          // المستخدم محقق، سجل الدخول مباشرة
+          console.log('✅ User is verified, logging in...');
           const result = await signIn("credentials", {
             redirect: false,
             email: formData.login_email,
             password: formData.login_password
           });
-          
-          if (result.error) {
-            setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
-          } else {
+          console.log('📝 Login result:', result);
+          if (result?.ok) {
+            console.log('🎉 Login successful!');
             onClose();
+          } else {
+            console.log('❌ Login failed:', result?.error);
+            setError('البريد الإلكتروني أو كلمة المرور غير صحيحة');
           }
         } else {
-          // المستخدم غير محقق، أرسل رمز التحقق
+          console.log('⚠️ User not verified, sending code...');
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           setVerificationCode(code);
-          await fetch('/api/send-verification', {
+          const sendResponse = await fetch('/api/send-verification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: formData.login_email, code })
           });
-          setShowVerification(true);
+          if (sendResponse.ok) {
+            setShowVerification(true);
+          } else {
+            setError('فشل إرسال رمز التحقق');
+          }
         }
       }
     } catch (error) {
-      setError('An error occurred');
+      console.error('❌ Submit error:', error);
+      setError('حدث خطأ، يرجى المحاولة مرة أخرى');
     }
   };
 
   const handleVerify = async (enteredCode) => {
-    if (enteredCode === verificationCode) {
-      try {
-        if (activeTab === 'signup') {
-          const response = await fetch('/api/verify-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: formData.signup_email })
-          });
-
-          if (response.ok) {
-            const result = await signIn("credentials", {
-              redirect: false,
-              email: formData.signup_email,
-              password: formData.signup_password
-            });
-            if (!result.error) onClose();
-          }
-        } else {
-          // أولاً، قم بتحديث حالة التحقق في قاعدة البيانات
-          await fetch('/api/verify-user', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: formData.login_email })
-          });
-
-          // ثم سجل الدخول
-          const result = await signIn("credentials", {
-            redirect: false,
-            email: formData.login_email,
-            password: formData.login_password
-          });
-          if (!result.error) onClose();
-        }
-      } catch (error) {
-        setError('Verification failed');
+    if (enteredCode !== verificationCode) {
+      setError('رمز التحقق غير صحيح');
+      return;
+    }
+    setError('');
+    try {
+      const emailToVerify = activeTab === 'signup' ? formData.signup_email : formData.login_email;
+      const passwordToUse = activeTab === 'signup' ? formData.signup_password : formData.login_password;
+      console.log('✓ Verifying user:', emailToVerify);
+      const verifyResponse = await fetch('/api/verify-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToVerify })
+      });
+      if (!verifyResponse.ok) {
+        throw new Error('فشل التحقق من الحساب');
       }
-    } else {
-      setError('Invalid verification code');
+      console.log('✅ User verified, logging in...');
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: emailToVerify,
+        password: passwordToUse
+      });
+      if (result?.error) {
+        setError('فشل تسجيل الدخول: ' + result.error);
+      } else if (result?.ok) {
+        onClose();
+      }
+    } catch (error) {
+      console.error('❌ Verification error:', error);
+      setError(error.message || 'فشل التحقق');
     }
   };
 
@@ -186,26 +185,12 @@ export default function Auth({ onClose }) {
               <div className="form">
                 <ul className="flex justify-between list-none p-0 mb-5">
                   <li className="flex-1 mx-1">
-                    <a
-                      href="#signup"
-                      onClick={(e) => handleTabClick(e, 'signup')}
-                      className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${activeTab === 'signup'
-                          ? 'bg-[#000000] text-white'
-                          : 'bg-[rgba(0,0,0,0.74)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'
-                        }`}
-                    >
+                    <a href="#signup" onClick={(e) => handleTabClick(e, 'signup')} className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${activeTab === 'signup' ? 'bg-[#000000] text-white' : 'bg-[rgba(0,0,0,0.74)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'}`}>
                       حساب جديد
                     </a>
                   </li>
                   <li className="flex-1 mx-1">
-                    <a
-                      href="#login"
-                      onClick={(e) => handleTabClick(e, 'login')}
-                      className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${activeTab === 'login'
-                          ? 'bg-[#000000] text-white'
-                          : 'bg-[rgba(0,0,0,0.74)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'
-                        }`}
-                    >
+                    <a href="#login" onClick={(e) => handleTabClick(e, 'login')} className={`block py-2.5 px-2.5 text-center text-xl cursor-pointer transition-all duration-500 ease-in-out rounded-2xl ${activeTab === 'login' ? 'bg-[#000000] text-white' : 'bg-[rgba(0,0,0,0.74)] text-[#a0b3b0] hover:bg-h-glass hover:text-white'}`}>
                       تسجيل الدخول
                     </a>
                   </li>
@@ -219,47 +204,15 @@ export default function Auth({ onClose }) {
                     <form onSubmit={handleSubmit} autoComplete="off">
                       <div className="mb-4">
                         <div className="w-full relative">
-                          <input
-                            type="text"
-                            required
-                            name="signup_full_name"
-                            value={formData.signup_full_name}
-                            onChange={handleInputChange}
-                            className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]"
-                            placeholder="الاسم الكامل"
-                            autoComplete="new-full-name"
-                          />
+                          <input type="text" required name="signup_full_name" value={formData.signup_full_name} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="الاسم الكامل" autoComplete="new-full-name" />
                         </div>
                       </div>
                       <div className="mb-2 relative">
-                        <input
-                          type="email"
-                          required
-                          name="signup_email"
-                          value={formData.signup_email}
-                          onChange={handleInputChange}
-                          className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]"
-                          placeholder="البريد الإلكتروني"
-                          autoComplete="new-email"
-                        />
+                        <input type="email" required name="signup_email" value={formData.signup_email} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="البريد الإلكتروني" autoComplete="new-email" />
                       </div>
                       <div className="mb-8 relative">
-                        <input
-                          type={showSignupPassword ? "text" : "password"}
-                          required
-                          name="signup_password"
-                          value={formData.signup_password}
-                          onChange={handleInputChange}
-                          dir="rtl"
-                          className="text-lg w-full py-2.5 px-4 pr-5 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000] text-right"
-                          placeholder="كلمة المرور"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSignupPassword(!showSignupPassword)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-black"
-                        >
+                        <input type={showSignupPassword ? "text" : "password"} required name="signup_password" value={formData.signup_password} onChange={handleInputChange} dir="rtl" className="text-lg w-full py-2.5 px-4 pr-5 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000] text-right" placeholder="كلمة المرور" autoComplete="new-password" />
+                        <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-black">
                           {showSignupPassword ? (
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -272,44 +225,19 @@ export default function Auth({ onClose }) {
                           )}
                         </button>
                       </div>
-
-                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#000000] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#333333]">
-                        تسجيل
-                      </button>
+                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#000000] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#333333]">تسجيل</button>
                     </form>
                   </div>
+
                   <div id="login" style={{ display: activeTab === 'login' ? 'block' : 'none' }}>
                     <h1 className="text-center text-black font-light text-3xl mb-2.5">مرحباً بعودتك</h1>
                     <form onSubmit={handleSubmit} autoComplete="off">
                       <div className="mb-10 relative">
-                        <input
-                          type="email"
-                          required
-                          name="login_email"
-                          value={formData.login_email}
-                          onChange={handleInputChange}
-                          className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]"
-                          placeholder="البريد الإلكتروني"
-                          autoComplete="new-email"
-                        />
+                        <input type="email" required name="login_email" value={formData.login_email} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="البريد الإلكتروني" autoComplete="new-email" />
                       </div>
                       <div className="mb-10 relative">
-                        <input
-                          type={showLoginPassword ? "text" : "password"}
-                          required
-                          name="login_password"
-                          value={formData.login_password}
-                          onChange={handleInputChange}
-                          dir="rtl"
-                          className="text-lg w-full py-2.5 px-4 pr-5 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000] text-right"
-                          placeholder="كلمة المرور"
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowLoginPassword(!showLoginPassword)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-black"
-                        >
+                        <input type={showLoginPassword ? "text" : "password"} required name="login_password" value={formData.login_password} onChange={handleInputChange} dir="rtl" className="text-lg w-full py-2.5 px-4 pr-5 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000] text-right" placeholder="كلمة المرور" autoComplete="new-password" />
+                        <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute left-3 top-1/2 -translate-y-1/2 text-black">
                           {showLoginPassword ? (
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -322,10 +250,7 @@ export default function Auth({ onClose }) {
                           )}
                         </button>
                       </div>
-
-                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#000000] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#333333]">
-                        تسجيل الدخول
-                      </button>
+                      <button type="submit" className="w-full py-2.5 px-0 text-xl font-normal bg-[#000000] text-white rounded-2xl cursor-pointer transition-all duration-500 ease-in-out hover:bg-[#333333]">تسجيل الدخول</button>
                     </form>
                   </div>
                 </div>

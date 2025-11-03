@@ -3,35 +3,47 @@ import clientPromise from "@/lib/mongodb";
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { email } = req.query;
     
     if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+      return res.status(400).json({ 
+        error: 'Email is required',
+        isVerified: false 
+      });
     }
 
     const client = await clientPromise;
-    const usersCollection = client.db().collection("users");
+    const db = client.db();
     
-    // البحث عن المستخدم في قاعدة البيانات
-    const user = await usersCollection.findOne({ email: email.toLowerCase() });
+    // البحث عن المستخدم
+    const user = await db.collection('users').findOne({ 
+      email: email.toLowerCase().trim() 
+    });
+    
+    console.log('🔍 Checking user:', email, 'Found:', !!user, 'isVerified:', user?.isVerified);
     
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(200).json({ 
+        isVerified: false,
+        message: 'User not found'
+      });
     }
 
     // إرجاع حالة التحقق
-    res.status(200).json({ 
-      isVerified: user.isVerified || false,
-      email: user.email 
+    return res.status(200).json({ 
+      isVerified: user.isVerified === true,
+      email: user.email
     });
 
   } catch (error) {
-    console.error('خطأ في التحقق من حالة المستخدم:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Error in user-verification-status:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      isVerified: false 
+    });
   }
 }
