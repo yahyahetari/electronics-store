@@ -42,6 +42,27 @@ export default function Auth({ onClose }) {
     }));
   };
 
+  const checkUserExists = async (email) => {
+    try {
+      console.log('🔍 Checking if user exists:', email);
+      const response = await fetch(`/api/check-user-exists?email=${encodeURIComponent(email)}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log('📡 Response status:', response.status);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ User exists data:', data);
+        return data.exists === true;
+      }
+      console.log('⚠️ Response not ok');
+      return false;
+    } catch (error) {
+      console.error('❌ Error checking user existence:', error);
+      return false;
+    }
+  };
+
   const checkUserVerificationStatus = async (email) => {
     try {
       console.log('🔍 Checking verification for:', email);
@@ -77,6 +98,7 @@ export default function Auth({ onClose }) {
             password: formData.signup_password
           })
         });
+        
         if (response.ok) {
           const code = Math.floor(100000 + Math.random() * 900000).toString();
           setVerificationCode(code);
@@ -88,12 +110,63 @@ export default function Auth({ onClose }) {
           setShowVerification(true);
         } else {
           const data = await response.json();
-          setError(data.error || 'فشل التسجيل');
+          
+          // إذا كان المستخدم موجود لكن غير محقق، أرسل كود التحقق
+          if (data.error && (data.error.includes('already exists') || data.error.includes('موجود'))) {
+            console.log('⚠️ User exists but may not be verified, checking status...');
+            const isVerified = await checkUserVerificationStatus(formData.signup_email);
+            
+            if (!isVerified) {
+              console.log('📧 User not verified, sending verification code...');
+              const code = Math.floor(100000 + Math.random() * 900000).toString();
+              setVerificationCode(code);
+              const sendResponse = await fetch('/api/send-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: formData.signup_email, code })
+              });
+              if (sendResponse.ok) {
+                setError('');
+                setShowVerification(true);
+              } else {
+                setError('فشل إرسال رمز التحقق');
+              }
+            } else {
+              setError('هذا البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول');
+              setActiveTab('login');
+              setFormData(prev => ({
+                ...prev,
+                login_email: formData.signup_email
+              }));
+            }
+          } else {
+            setError(data.error || 'فشل التسجيل');
+          }
         }
       } else {
         console.log('🔐 Attempting login for:', formData.login_email);
+        
+        // التحقق من وجود المستخدم أولاً
+        const userExists = await checkUserExists(formData.login_email);
+        console.log('👤 Does user exist?', userExists);
+        
+        if (!userExists) {
+          // المستخدم غير موجود - تحويله لفورم التسجيل
+          console.log('⚠️ User does not exist, redirecting to signup...');
+          setError('هذا البريد الإلكتروني غير مسجل. يرجى إنشاء حساب جديد');
+          setActiveTab('signup');
+          // نسخ البريد الإلكتروني إلى فورم التسجيل
+          setFormData(prev => ({
+            ...prev,
+            signup_email: formData.login_email
+          }));
+          return;
+        }
+        
+        // المستخدم موجود - التحقق من حالة التحقق
         const isUserVerified = await checkUserVerificationStatus(formData.login_email);
         console.log('✓ Is user verified?', isUserVerified);
+        
         if (isUserVerified) {
           console.log('✅ User is verified, logging in...');
           const result = await signIn("credentials", {
@@ -204,11 +277,11 @@ export default function Auth({ onClose }) {
                     <form onSubmit={handleSubmit} autoComplete="off">
                       <div className="mb-4">
                         <div className="w-full relative">
-                          <input type="text" required name="signup_full_name" value={formData.signup_full_name} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="الاسم الكامل" autoComplete="new-full-name" />
+                          <input type="text" required name="signup_full_name" value={formData.signup_full_name} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="الاسم الكامل" autoComplete="new-full-name" />
                         </div>
                       </div>
                       <div className="mb-2 relative">
-                        <input type="email" required name="signup_email" value={formData.signup_email} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="البريد الإلكتروني" autoComplete="new-email" />
+                        <input type="email" required name="signup_email" value={formData.signup_email} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="البريد الإلكتروني" autoComplete="new-email" />
                       </div>
                       <div className="mb-8 relative">
                         <input type={showSignupPassword ? "text" : "password"} required name="signup_password" value={formData.signup_password} onChange={handleInputChange} dir="rtl" className="text-lg w-full py-2.5 px-4 pr-5 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000] text-right" placeholder="كلمة المرور" autoComplete="new-password" />
@@ -233,7 +306,7 @@ export default function Auth({ onClose }) {
                     <h1 className="text-center text-black font-light text-3xl mb-2.5">مرحباً بعودتك</h1>
                     <form onSubmit={handleSubmit} autoComplete="off">
                       <div className="mb-10 relative">
-                        <input type="email" required name="login_email" value={formData.login_email} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-white rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="البريد الإلكتروني" autoComplete="new-email" />
+                        <input type="email" required name="login_email" value={formData.login_email} onChange={handleInputChange} className="text-lg w-full py-2.5 px-4 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000]" placeholder="البريد الإلكتروني" autoComplete="new-email" />
                       </div>
                       <div className="mb-10 relative">
                         <input type={showLoginPassword ? "text" : "password"} required name="login_password" value={formData.login_password} onChange={handleInputChange} dir="rtl" className="text-lg w-full py-2.5 px-4 pr-5 bg-transparent border-2 border-[#777] text-black rounded-md transition-all duration-250 ease-in-out focus:outline-none focus:border-[#000] text-right" placeholder="كلمة المرور" autoComplete="new-password" />
