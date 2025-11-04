@@ -15,7 +15,7 @@ module.exports = {
       },
       backgroundColor: {
         'glass': 'rgba(0, 0, 0, 0.1)',
-        'h-glass':'rgba(0, 0, 0, 0.5)',
+        'h-glass':'rgba(0, 0, 0, 0.3)',
       },
     },
     
