@@ -120,7 +120,7 @@ export default function Products({ allProducts, categories }) {
     applyFilters(allProducts);
   }, [currentFilters, selectedMainCategory]);
 
-  // دالة تطبيق الفلاتر المحسنة (مطابقة للكود الأول)
+  // دالة تطبيق الفلاتر المحسنة
   const applyFilters = (products) => {
     if (!products) return;
     
@@ -137,7 +137,7 @@ export default function Products({ allProducts, categories }) {
       if (currentFilters.minPrice !== '' && productPrice < Number(currentFilters.minPrice)) return false;
       if (currentFilters.maxPrice !== '' && productPrice > Number(currentFilters.maxPrice)) return false;
 
-      // فلتر الفئات (بدون تغيير - مثل الكود الأصلي)
+      // فلتر الفئات
       if (selectedMainCategory) {
         const subCategories = categories
           .filter(cat => cat.parent === selectedMainCategory)
@@ -150,17 +150,23 @@ export default function Products({ allProducts, categories }) {
         }
       }
 
-      // فلترة الخصائص المحسنة
+      // فلترة الخصائص المحسنة - الحل الصحيح
       for (const [key, values] of Object.entries(currentFilters.properties)) {
         if (values.length > 0) {
           let hasMatchingProperty = false;
           
           // التحقق من المتغيرات أولاً
           if (product.variants && product.variants.length > 0) {
+            // نبحث عن variant واحد على الأقل يحتوي على أي من القيم المختارة
             hasMatchingProperty = product.variants.some(variant => {
-              return values.every(value => {
-                return variant.properties && variant.properties[key]?.includes(value);
-              });
+              if (!variant.properties || !variant.properties[key]) return false;
+              
+              const variantPropertyValues = Array.isArray(variant.properties[key])
+                ? variant.properties[key]
+                : [variant.properties[key]];
+              
+              // نتحقق إذا كان الـ variant يحتوي على أي من القيم المختارة
+              return values.some(value => variantPropertyValues.includes(value));
             });
           } 
           // احتياطي للمنتجات بدون variants
@@ -168,7 +174,8 @@ export default function Products({ allProducts, categories }) {
             const productPropertyValues = Array.isArray(product.properties[key]) 
               ? product.properties[key] 
               : [product.properties[key]];
-            hasMatchingProperty = values.every(value => productPropertyValues.includes(value));
+            // نتحقق إذا كان المنتج يحتوي على أي من القيم المختارة
+            hasMatchingProperty = values.some(value => productPropertyValues.includes(value));
           }
           
           if (!hasMatchingProperty) return false;
@@ -206,7 +213,7 @@ export default function Products({ allProducts, categories }) {
     setPage(1);
   };
 
-  // دالة معالجة تغيير الفلاتر (مطابقة للكود الأول)
+  // دالة معالجة تغيير الفلاتر
   const handleFilterChange = (name, value) => {
     setCurrentFilters(prev => {
       if (name.startsWith('property_')) {
@@ -273,7 +280,7 @@ export default function Products({ allProducts, categories }) {
               <div className="bg-gray-300 p-6 rounded-lg shadow-lg mb-4">
                 <h3 className="text-2xl font-semibold mb-4">الفلاتر</h3>
 
-                {/* فلتر الفئات - بدون تغيير */}
+                {/* فلتر الفئات */}
                 <FilterSection
                   title="الفئات"
                   name="categories"
@@ -481,7 +488,7 @@ const RadioButton = ({ label, name, value, checked, onChange }) => (
       className="form-radio text-blue-600"
     />
     <span className="text-lg">{label}</span>
-    </label>
+  </label>
 );
 
 const Checkbox = ({ label, checked, onChange }) => (
@@ -493,7 +500,7 @@ const Checkbox = ({ label, checked, onChange }) => (
       className="form-checkbox text-blue-600"
     />
     <span className="text-base">{label}</span>
-    </label>
+  </label>
 );
 
 export async function getServerSideProps() {

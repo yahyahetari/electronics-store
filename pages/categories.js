@@ -21,7 +21,7 @@ export default function Categories({ categoriesWithSubcategories = [] }) {
   const [openSections, setOpenSections] = useState({});
   const [availableProperties, setAvailableProperties] = useState({});
 
-  // دالة لتحديث الخصائص المتاحة (مطابقة للكود الأول)
+  // دالة لتحديث الخصائص المتاحة مع ترتيب ذكي
   const updateAvailableProperties = (products) => {
     const properties = {};
     
@@ -52,15 +52,49 @@ export default function Categories({ categoriesWithSubcategories = [] }) {
       }
     });
 
+    // دالة الترتيب الذكي للخصائص
+    const smartSort = (values) => {
+      return values.sort((a, b) => {
+        const aStr = a.toString();
+        const bStr = b.toString();
+        
+        // استخراج الأرقام من النص
+        const extractNumbers = (text) => {
+          const matches = text.match(/\d+/g);
+          return matches ? matches.map(Number) : [0];
+        };
+        
+        const aNumbers = extractNumbers(aStr);
+        const bNumbers = extractNumbers(bStr);
+        
+        // إذا كان كلاهما يحتوي على أرقام
+        if (aNumbers.length > 0 && bNumbers.length > 0) {
+          // مقارنة الرقم الأول
+          if (aNumbers[0] !== bNumbers[0]) {
+            return aNumbers[0] - bNumbers[0];
+          }
+          // إذا كان الرقم الأول متساوي، قارن الرقم الثاني
+          if (aNumbers.length > 1 && bNumbers.length > 1) {
+            return aNumbers[1] - bNumbers[1];
+          }
+          return aNumbers.length - bNumbers.length;
+        }
+        
+        // ترتيب أبجدي للنصوص العادية
+        return aStr.localeCompare(bStr, 'ar');
+      });
+    };
+
     const formattedProperties = {};
     Object.entries(properties).forEach(([key, values]) => {
-      formattedProperties[key] = Array.from(values);
+      const valuesArray = Array.from(values);
+      formattedProperties[key] = smartSort(valuesArray);
     });
 
     setAvailableProperties(formattedProperties);
   };
 
-  // دالة تطبيق الفلاتر المحدثة (مطابقة للكود الأول)
+  // دالة تطبيق الفلاتر المحسنة - مع الإصلاح
   const applyFilters = (products) => {
     if (!products) return;
     
@@ -71,23 +105,29 @@ export default function Categories({ categoriesWithSubcategories = [] }) {
         const variantPrices = product.variants.map(v => v.price);
         productPrice = Math.min(...variantPrices);
       } else {
-        productPrice = product.price;
+        productPrice = product.price || 0;
       }
       
       if (currentFilters.minPrice !== '' && productPrice < Number(currentFilters.minPrice)) return false;
       if (currentFilters.maxPrice !== '' && productPrice > Number(currentFilters.maxPrice)) return false;
 
-      // فلترة الخصائص
+      // فلترة الخصائص المحسنة - الحل الصحيح ✅
       for (const [key, values] of Object.entries(currentFilters.properties)) {
         if (values.length > 0) {
           let hasMatchingProperty = false;
           
           // التحقق من المتغيرات أولاً
           if (product.variants && product.variants.length > 0) {
+            // نبحث عن variant واحد على الأقل يحتوي على أي من القيم المختارة
             hasMatchingProperty = product.variants.some(variant => {
-              return values.every(value => {
-                return variant.properties && variant.properties[key]?.includes(value);
-              });
+              if (!variant.properties || !variant.properties[key]) return false;
+              
+              const variantPropertyValues = Array.isArray(variant.properties[key])
+                ? variant.properties[key]
+                : [variant.properties[key]];
+              
+              // نتحقق إذا كان الـ variant يحتوي على أي من القيم المختارة
+              return values.some(value => variantPropertyValues.includes(value));
             });
           } 
           // احتياطي للمنتجات بدون variants
@@ -95,7 +135,8 @@ export default function Categories({ categoriesWithSubcategories = [] }) {
             const productPropertyValues = Array.isArray(product.properties[key]) 
               ? product.properties[key] 
               : [product.properties[key]];
-            hasMatchingProperty = values.every(value => productPropertyValues.includes(value));
+            // نتحقق إذا كان المنتج يحتوي على أي من القيم المختارة
+            hasMatchingProperty = values.some(value => productPropertyValues.includes(value));
           }
           
           if (!hasMatchingProperty) return false;
@@ -104,25 +145,25 @@ export default function Categories({ categoriesWithSubcategories = [] }) {
       return true;
     });
 
-    // الترتيب
+    // الترتيب المحسن
     if (currentFilters.sortOrder === 'asc') {
       filtered.sort((a, b) => {
         const priceA = a.variants && a.variants.length > 0 
           ? Math.min(...a.variants.map(v => v.price)) 
-          : a.price;
+          : a.price || 0;
         const priceB = b.variants && b.variants.length > 0 
           ? Math.min(...b.variants.map(v => v.price)) 
-          : b.price;
+          : b.price || 0;
         return priceA - priceB;
       });
     } else if (currentFilters.sortOrder === 'desc') {
       filtered.sort((a, b) => {
         const priceA = a.variants && a.variants.length > 0 
           ? Math.min(...a.variants.map(v => v.price)) 
-          : a.price;
+          : a.price || 0;
         const priceB = b.variants && b.variants.length > 0 
           ? Math.min(...b.variants.map(v => v.price)) 
-          : b.price;
+          : b.price || 0;
         return priceB - priceA;
       });
     }
@@ -166,7 +207,7 @@ export default function Categories({ categoriesWithSubcategories = [] }) {
     });
   };
 
-  // دالة معالجة تغيير الفلاتر المحدثة (مطابقة للكود الأول)
+  // دالة معالجة تغيير الفلاتر
   const handleFilterChange = (name, value) => {
     setCurrentFilters(prev => {
       if (name.startsWith('property_')) {
